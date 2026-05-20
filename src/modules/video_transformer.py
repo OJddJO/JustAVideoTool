@@ -9,3 +9,10 @@ class VideoTransformer(ABC):
         Returns a processed interleaved RGB array of shape (New_H, New_W, 3).
         """
         pass
+
+    def release_memory(self):
+        """
+        Frees up GPU VRAM and system memory used by the transformer models.
+        Override this in subclasses to clear execution providers and CUDA caches.
+        """
+        pass
