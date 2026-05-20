@@ -1,5 +1,10 @@
 import flet as ft
 
+from views.input import InputView
+from views.transform import TransformView
+from views.encoding import EncodingView
+from views.console import ConsoleView
+
 class VideoTool:
     def __init__(self):
         self.views_map: dict[ft.Container] = {}
@@ -8,7 +13,7 @@ class VideoTool:
 
     def main(self, page: ft.Page):
         self.page = page
-        page.title = "Video Tool"
+        page.title = "Just A Video Tool"
 
         self.init_ui()
 
@@ -20,30 +25,26 @@ class VideoTool:
     def init_ui(self):
         self.page.adaptive = True
 
-        view_transform = ft.Container(
-            content=ft.Column([
-                ft.Text("Execution Control Center", size=20, weight=ft.FontWeight.BOLD),
-                ft.Text("Configure your input scripts and initialize the transcode pipeline below."),
-                ft.Button("Start Processing Pass", icon=ft.Icons.PLAY_ARROW),
-            ], spacing=15),
-            padding=20
-        )
-
         self.views_map = {
-            0: view_transform
+            0: InputView(),
+            1: TransformView(),
+            2: EncodingView(),
+            3: ConsoleView()
         }
 
-        nav_sidebar = ft.NavigationRail(
+        nav_sidebar = ft.Container(ft.NavigationRail(
             selected_index=0,
-            width=100,
             elevation=15,
             destinations=[
+                ft.NavigationRailDestination(icon=ft.Icons.VIDEO_FILE, label="Input"),
                 ft.NavigationRailDestination(icon=ft.Icons.MOVIE_EDIT, label="Transform"),
+                ft.NavigationRailDestination(icon=ft.Icons.VIDEO_SETTINGS, label="Encoding"),
                 ft.NavigationRailDestination(icon=ft.Icons.TERMINAL_ROUNDED, label="Console")
             ],
             on_change=self.evHandler_navbar,
             expand=True,
-        )
+            bgcolor=ft.Colors.SURFACE
+        ), margin=ft.Margin.only(right=10), border_radius=15, shadow=ft.BoxShadow(1, 10, ft.Colors.SHADOW, ft.Offset(2, 2)))
 
         self.view_container = ft.Container(content=self.views_map[0], expand=True)
 
