@@ -9,27 +9,29 @@ class VideoTool:
     def __init__(self):
         self.views_map: dict[ft.Container] = {}
         self.view_container: ft.Container = None
+        self.log_file = None
 
 
-    def main(self, page: ft.Page):
+    async def main(self, page: ft.Page):
         self.page = page
         page.title = "Just A Video Tool"
+        log_file = await ft.StoragePaths().get_console_log_filename()
 
-        self.init_ui()
+        self.init_ui(log_file)
 
 
-    def evHandler_navbar(self, e: ft.Event[ft.NavigationRail]):
+    async def evHandler_navbar(self, e: ft.Event[ft.NavigationRail]):
         self.view_container.content = self.views_map[e.control.selected_index]
 
 
-    def init_ui(self):
+    def init_ui(self, log_file: str):
         self.page.adaptive = True
 
         self.views_map = {
             0: InputView(),
             1: TransformView(),
             2: EncodingView(),
-            3: ConsoleView()
+            3: ConsoleView(log_file)
         }
 
         nav_sidebar = ft.Container(ft.NavigationRail(

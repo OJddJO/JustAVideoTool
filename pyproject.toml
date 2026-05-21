@@ -1,0 +1,23 @@
+[project]
+name = "just_a_video_tool"
+
+[tool.flet.app]
+path = "src"
+module = "main.py"
+
+[tool.flet]
+product = "Just A Video Tool"
+artifact = "Just A Video Tool"
+org = "com.ojddjo"
+bundle_id = "com.ojddjo.javt"
+copyright = "Copyright © 2026 OJddJO"
+build_number = 1
+version = "1.0.0"
+
+[tool.flet.app.boot_screen]
+show = true
+message = "Cooking the app for its first launch..."
+
+[tool.flet.app.startup_screen]
+show = true
+message = "Getting the app ready..."
