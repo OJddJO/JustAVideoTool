@@ -7,7 +7,7 @@ A simple tool for video manipulations, such as encoding, downscaling, upscaling,
 
 ## Goals
 
-The main goal is to make an app for video alterations using AI with `.onnx` models (such as `RealCUGAN`, `RealESRGAN`, `Waifu2x`, `RIFE`, ...) with `Nvidia`'s acceleration technologies (CUDA/TensorRT). It would also encode the final result using [ffmpeg](https://ffmpeg.org/) with [AV1](https://aomedia.org/specifications/av1/) codec.
+The main goal is to make an app for video alterations using AI with `.onnx` models (such as `RealCUGAN`, `RealESRGAN`, `Waifu2x`, `RIFE`, ...) and `Nvidia`'s acceleration technologies (CUDA/TensorRT) in a modular pipelining approach. It would also encode the final result using [ffmpeg](https://ffmpeg.org/) with [AV1](https://aomedia.org/specifications/av1/) codec.
 
 - [ ] FINISHING THE APP
 - [ ] Non-Nvidia GPU support
