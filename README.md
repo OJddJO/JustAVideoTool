@@ -18,3 +18,6 @@ The main goal is to make an app for video alterations using AI with `.onnx` mode
 - [PyTorch](https://pytorch.org/): a widely used Python deep learning library
 - [numpy](https://numpy.org/): a well-known Python library for multi-dimensionnal arrays/matrices computing
 - [ONNX runtime](https://onnxruntime.ai/): a performance-focused AI engine for `.onnx` models
+
+## License
+This project is under MIT License, see [LICENSE](/LICENSE) for more informations.
