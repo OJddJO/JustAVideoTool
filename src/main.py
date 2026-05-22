@@ -7,7 +7,7 @@ from views.console import ConsoleView
 
 class VideoTool:
     def __init__(self):
-        self.views_map: dict[ft.Container] = {}
+        self.views_map: dict[int: ft.Container] = {}
         self.view_container: ft.Container = None
         self.log_file = None
 
@@ -38,7 +38,7 @@ class VideoTool:
             selected_index=0,
             elevation=15,
             destinations=[
-                ft.NavigationRailDestination(icon=ft.Icons.VIDEO_FILE, label="Input"),
+                ft.NavigationRailDestination(icon=ft.Icons.VIDEO_FILE_OUTLINED, label="Input"),
                 ft.NavigationRailDestination(icon=ft.Icons.MOVIE_EDIT, label="Transform"),
                 ft.NavigationRailDestination(icon=ft.Icons.VIDEO_SETTINGS, label="Encoding"),
                 ft.NavigationRailDestination(icon=ft.Icons.TERMINAL_ROUNDED, label="Console")
