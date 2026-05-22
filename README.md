@@ -4,3 +4,17 @@ A simple tool for video manipulations, such as encoding, downscaling, upscaling,
 
 > [!NOTE]
 > This app is still in developpment
+
+## Goals
+
+The main goal is to make an app for video alterations using AI with `.onnx` models (such as `RealCUGAN`, `RealESRGAN`, `Waifu2x`, `RIFE`, ...) with `Nvidia`'s acceleration technologies (CUDA/TensorRT). It would also encode the final result using [ffmpeg](https://ffmpeg.org/) into [AV1](https://aomedia.org/specifications/av1/) codec.
+
+- [ ] FINISHING THE APP
+- [ ] Non-Nvidia GPU support
+
+## Frameworks Used
+
+- [flet](https://flet.dev/): a simple framework for building [Flutter](https://flutter.dev/) apps in Python
+- [PyTorch](https://pytorch.org/): a widely used Python deep learning library
+- [numpy](https://numpy.org/): a well-known Python library for multi-dimensionnal arrays/matrices computing
+- [ONNX runtime](https://onnxruntime.ai/): a performance-focused AI engine for `.onnx` models

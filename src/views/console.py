@@ -1,9 +1,9 @@
 import flet as ft
 import os
 import asyncio
-from views.generic import GenericContainer
+from views.generic import GenericView
 
-class ConsoleView(GenericContainer):
+class ConsoleView(GenericView):
     def __init__(self, log_file: str):
         super().__init__()
         self.log_file = log_file

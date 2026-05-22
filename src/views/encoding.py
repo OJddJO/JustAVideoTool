@@ -1,6 +1,6 @@
 import flet as ft
-from views.generic import GenericContainer
+from views.generic import GenericView
 
-class EncodingView(GenericContainer):
+class EncodingView(GenericView):
     def __init__(self):
         super().__init__()

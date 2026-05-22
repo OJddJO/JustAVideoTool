@@ -1,7 +1,7 @@
 import flet as ft
 import os
 import subprocess
-from views.generic import GenericContainer
+from views.generic import GenericView, GenericContainer
 
 __all__ = ["InputView"]
 
@@ -61,7 +61,7 @@ class FilePathField(GenericContainer):
         return (self.filename, self.filepath, self.filesize)
 
 
-class InputView(GenericContainer):
+class InputView(GenericView):
     def __init__(self):
         super().__init__()
 
