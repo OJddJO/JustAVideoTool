@@ -14,7 +14,7 @@ class ModularProcessingPipeline:
         self.transformers.append(transformer)
         return self
 
-    def clean_memory(self):
+    async def clean_memory(self):
         for transformer in self.transformers:
             transformer.release_memory()
 

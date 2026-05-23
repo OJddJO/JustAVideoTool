@@ -104,7 +104,7 @@ class InputView(GenericView):
     async def handle_file_selection(self, e: ft.Event[ft.Button]):
         files = await self.file_picker.pick_files(
             dialog_title="Select the videos you want to edit",
-            allowed_extensions=["mp4", "mov", "mkv"] , allow_multiple=True)
+            allowed_extensions=["mp4", "mkv", "mov"] , allow_multiple=True)
 
         existing_paths = [field.get_file_attr() for field in self.picked_file_paths]
 

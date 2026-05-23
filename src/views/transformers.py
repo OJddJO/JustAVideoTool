@@ -22,7 +22,7 @@ class TransformerLayer(GenericContainer):
             [
                 ft.ReorderableDragHandle(
                     ft.Icon(ft.Icons.DRAG_INDICATOR, color=ft.Colors.ON_SURFACE),
-                    mouse_cursor=ft.MouseCursor.MOVE
+                    mouse_cursor=ft.MouseCursor.RESIZE_UP_DOWN
                 ),
                 ft.Column(
                     [
@@ -59,26 +59,68 @@ GAN (Generative Adversarial Network): An AI architecture where two neural networ
 ESRGAN (Enhanced Super-Resolution GAN): Optimized for real-world photos and realistic textures. It is incredibly good at reconstructing fine details like human hair, fabric weave, tree bark, and rock surfaces, making it a favorite for remastering old video games and photography."""
 
     def __init__(self):
-        super().__init__([
-            ft.Divider(),
-            ft.Row([
-                ft.Text(
-                    "Tiling parameters",
-                    size=16,
-                    weight=ft.FontWeight.BOLD
-                ),
-                ft.Icon(
-                    ft.Icons.HELP_OUTLINE,
-                    tooltip="Tiling helps reducing VRAM usage at the cost of speed.\nThe smaller the tile, the less VRAM will be used. Bigger tile padding can help avoid tearing.",
-                    size=18
+        self.tile_width = NumberInput(value="620", label="Tile width")
+        self.tile_height = NumberInput(value="360", label="Tile height")
+        self.tile_pad = NumberInput(value="64", label="Tile padding")
+        self.scale_factor = NumberInput(value="2", label="Scale factor", expand=True)
+        self.cache_dir = TextField(label="Cache path", expand=True, value="cache/RealESRGAN")
+        super().__init__(
+            default_onnx="models/RealESRGANv2/RealESRGANv2-animevideo-xsx2.onnx",
+            content=[
+                ft.Divider(),
+                ft.Row([
+                    ft.Text("Tiling parameters", size=16, weight=ft.FontWeight.BOLD),
+                    ft.Icon(
+                        ft.Icons.HELP_OUTLINE,
+                        size=18,
+                        tooltip="Tiling helps reducing VRAM usage at the cost of speed.\nThe smaller the tile, the less VRAM will be used. Bigger tile padding can help avoid tearing.",
+                    )
+                ]),
+                ft.Row([
+                    self.tile_width,
+                    self.tile_height,
+                    self.tile_pad
+                ]),
+                ft.Divider(),
+                ft.Row([
+                    ft.Text("Scale factor", size=16, weight=ft.FontWeight.BOLD),
+                    ft.Icon(ft.Icons.HELP_OUTLINE, size=18, tooltip="Please choose the correct model if modifying the scale factor."),
+                    self.scale_factor
+                ], expand=True),
+                ft.Divider(),
+                ft.ExpansionTile(
+                    title="Advanced Setttings",
+                    controls=ft.Column(
+                        [
+                            ft.Text("Cache directory", size=16, weight=ft.FontWeight.BOLD),
+                            ft.Row([
+                                self.cache_dir,
+                                ft.Button("Choose directory", icon=ft.Icons.FOLDER_OPEN_OUTLINED, on_click=self.choose_cache_dir)
+                            ],expand=True)
+                        ]
+                    ),
+                    dense=True,
+                    expanded=False,
+                    shape=ft.RoundedRectangleBorder(radius=0),
+                    collapsed_shape=ft.RoundedRectangleBorder(radius=0),
                 )
-            ]),
-            ft.Row([
-                NumberInput(value="620", label="Tile width"),
-                NumberInput(value="360", label="Tile height"),
-                NumberInput(value="64", label="Tile padding")
-            ])
-        ], "models/RealESRGANv2/RealESRGANv2-animevideo-xsx2.onnx")
+            ]
+        )
+
+    async def choose_cache_dir(self, e: ft.Event[ft.Button]):
+        dir = await self.file_picker.get_directory_path("Choose the cache directory")
+        if dir:
+            self.cache_dir.value = dir
+
+    async def build_transformer(self):
+        return RealESRGAN_TRT_CUDA(
+            onnx_model_path=self.onnx_model_path.value,
+            cache_dir=self.cache_dir.value,
+            tile_width=self.tile_width.value,
+            tile_height=self.tile_height.value,
+            tile_pad=self.tile_pad.value,
+            scale=self.scale_factor
+        )
 
 @ft.control
 class RealCUGAN_Layer(TransformerLayer):
@@ -87,23 +129,69 @@ GAN (Generative Adversarial Network): An AI architecture where two neural networ
 CUGAN (Cascaded-U-Net GAN): Specifically optimized for Anime, Manga, and Cartoon art. It focuses on fixing the unique issues found in digital animation—like cleaning up jagged line art, removing compression noise, and preserving smooth color gradients without creating ugly artifacts."""
 
     def __init__(self):
-        super().__init__([
-            ft.Divider(),
-            ft.Row([
-                ft.Text(
-                    "Tiling parameters",
-                    size=16,
-                    weight=ft.FontWeight.BOLD
-                ),
-                ft.Icon(
-                    ft.Icons.HELP_OUTLINE,
-                    tooltip="Tiling helps reducing VRAM usage at the cost of speed.\nThe smaller the tile, the less VRAM will be used. Bigger tile padding can help avoid tearing.",
-                    size=18
+        self.tile_width = NumberInput(value="620", label="Tile width")
+        self.tile_height = NumberInput(value="360", label="Tile height")
+        self.tile_pad = NumberInput(value="64", label="Tile padding")
+        self.scale_factor = NumberInput(value="2", label="Scale factor", expand=True)
+        self.cache_dir = TextField(label="Cache path", expand=True, value="cache/RealCUGAN")
+        super().__init__(
+            default_onnx="models/cugan/pro-conservative-up2x.onnx",
+            content=[
+                ft.Divider(),
+                ft.Row([
+                    ft.Text(
+                        "Tiling parameters",
+                        size=16,
+                        weight=ft.FontWeight.BOLD
+                    ),
+                    ft.Icon(
+                        ft.Icons.HELP_OUTLINE,
+                        size=18,
+                        tooltip="Tiling helps reducing VRAM usage at the cost of speed.\nThe smaller the tile, the less VRAM will be used. Bigger tile padding can help avoid tearing.",
+                    )
+                ]),
+                ft.Row([
+                    self.tile_width,
+                    self.tile_height,
+                    self.tile_pad
+                ]),
+                ft.Divider(),
+                ft.Row([
+                    ft.Text("Scale factor", size=16, weight=ft.FontWeight.BOLD),
+                    ft.Icon(ft.Icons.HELP_OUTLINE, size=18, tooltip="Please choose the correct model if modifying the scale factor."),
+                    self.scale_factor
+                ], expand=True),
+                ft.Divider(),
+                ft.ExpansionTile(
+                    title="Advanced Setttings",
+                    controls=ft.Column(
+                        [
+                            ft.Text("Cache directory", size=16, weight=ft.FontWeight.BOLD),
+                            ft.Row([
+                                self.cache_dir,
+                                ft.Button("Choose directory", icon=ft.Icons.FOLDER_OPEN_OUTLINED, on_click=self.choose_cache_dir)
+                            ], expand=True)
+                        ]
+                    ),
+                    dense=True,
+                    expanded=False,
+                    shape=ft.RoundedRectangleBorder(radius=0),
+                    collapsed_shape=ft.RoundedRectangleBorder(radius=0),
                 )
-            ]),
-            ft.Row([
-                NumberInput(value="620", label="Tile width"),
-                NumberInput(value="360", label="Tile height"),
-                NumberInput(value="64", label="Tile padding")
-            ])
-        ], "models/cugan/pro-conservative-up2x.onnx")
+            ]
+        )
+
+    async def choose_cache_dir(self, e: ft.Event[ft.Button]):
+        dir = await self.file_picker.get_directory_path("Choose the cache directory")
+        if dir:
+            self.cache_dir.value = dir
+
+    async def build_transformer(self):
+        return RealCUGAN_TRT_CUDA(
+            onnx_model_path=self.onnx_model_path.value,
+            cache_dir=self.cache_dir.value,
+            tile_width=self.tile_width.value,
+            tile_height=self.tile_height.value,
+            tile_pad=self.tile_pad.value,
+            scale=self.scale_factor
+        )
