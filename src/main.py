@@ -1,6 +1,6 @@
 import flet as ft
 from enum import IntEnum
-from views.generic import GenericView
+from views.generic import GenericView, GenericOverlay
 from views.input import InputView
 from views.transform import TransformView
 from views.encoding import EncodingView
@@ -28,8 +28,11 @@ class VideoTool:
     async def evHandler_navbar(self, e: ft.Event[ft.NavigationRail]):
         self.view_container.content = self.views_map[e.control.selected_index]
         self.page.floating_action_button = self.views_map[e.control.selected_index].floating_action_button
+        self.page.overlay.clear()
+        self.page.overlay.extend(self.views_map[e.control.selected_index].overlay)
 
     def init_ui(self, log_file: str):
+        self.page.theme_mode = ft.ThemeMode.DARK
         self.page.adaptive = True
 
         self.views_map = {
@@ -62,10 +65,14 @@ class VideoTool:
 
         self.page.add(
             ft.SafeArea(
-                ft.Row([
-                    ft.Container(nav_sidebar),
-                    self.view_container
-                ], expand=True, spacing=0),
+                ft.Row(
+                    [
+                        ft.Container(nav_sidebar),
+                        self.view_container
+                    ],
+                    expand=True,
+                    spacing=0
+                ),
                 expand=True
             )
         )

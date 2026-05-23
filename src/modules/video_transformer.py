@@ -10,6 +10,7 @@ class VideoTransformer(ABC):
         """
         pass
 
+    @abstractmethod
     def release_memory(self):
         """
         Frees up GPU VRAM and system memory used by the transformer models.

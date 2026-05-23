@@ -21,7 +21,6 @@ class FilePathField(GenericContainer):
         self.filename = file.name
         self.filesize = file.size
 
-        self.expanded = False
         self.container = container
 
         self.content = ft.ExpansionTile(
@@ -35,7 +34,6 @@ class FilePathField(GenericContainer):
                 ft.Text(format_size(self.filesize)),
             ]),
             expanded=False,
-            controls_padding=ft.Padding(top=10),
             shape=ft.RoundedRectangleBorder(radius=0),
             collapsed_shape=ft.RoundedRectangleBorder(radius=0),
             controls=[
@@ -67,7 +65,7 @@ class InputView(GenericView):
 
         self.file_picker = ft.FilePicker()
         self.picked_file_paths: list[FilePathField] = []
-        self.file_container = ft.ListView(self.picked_file_paths, spacing=10, padding=20, clip_behavior=ft.ClipBehavior.HARD_EDGE, expand=True)
+        self.file_container = ft.ListView(self.picked_file_paths, spacing=20, padding=10, clip_behavior=ft.ClipBehavior.HARD_EDGE, expand=True)
 
         clear_selection_dialog = ft.AlertDialog(
             modal=True,
@@ -82,7 +80,7 @@ class InputView(GenericView):
 
         self.content = ft.Column(
             [
-                ft.Text("Video Input", size=24, weight=ft.FontWeight.BOLD),
+                ft.Text("Video Input", size=28, weight=ft.FontWeight.BOLD),
                 self.file_container,
                 ft.Row(
                     [

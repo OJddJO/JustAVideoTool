@@ -6,5 +6,9 @@
     "files.watcherExclude": {
         "**/build/**": true,
         "**/dist/**": true
+    },
+    "search.exclude": {
+        "**/build/**": true,
+        "**/dist/**": true
     }
 }

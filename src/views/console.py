@@ -13,12 +13,17 @@ class ConsoleView(GenericView):
             multiline=True,
             read_only=True,
             expand=True,
-            border_color=ft.Colors.TRANSPARENT
+            border_color=ft.Colors.TRANSPARENT,
+            filled=True,
+            fill_color=ft.Colors.SURFACE_CONTAINER,
+            hover_color=ft.Colors.SURFACE_CONTAINER,
+            border_radius=15,
+            text_size=14
         )
         self.content = ft.Column([
-            ft.Text("Console", size=24, weight=ft.FontWeight.BOLD),
+            ft.Text("Console", size=28, weight=ft.FontWeight.BOLD),
             self.text_field
-        ])
+        ], expand=True)
 
     def did_mount(self):
         self.running = True
@@ -38,12 +43,10 @@ class ConsoleView(GenericView):
             self.text_field.value = f.read()
             self.text_field.update()
 
-            # 2. Continuously loop and grab new data added to the file
             while self.running:
                 new_data = f.read()
                 if new_data:
                     self.text_field.value += new_data
                     self.text_field.update()
                 else:
-                    # Briefly pause so we don't max out the CPU while waiting for logs
                     await asyncio.sleep(0.1)

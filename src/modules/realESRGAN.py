@@ -44,9 +44,9 @@ class RealESRGAN_TRT_CUDA(VideoTransformer):
             }),
             ('CUDAExecutionProvider', {'device_id': 0}),
         ]
-        print("⏳ Initializing RealCUGAN... (Compilation may take time if using TensorRT)")
+        print("⏳ Initializing RealESRGAN... (Compilation may take time if using TensorRT)")
         self.session = ort.InferenceSession(self.onnx_model_path, providers=providers)
-        print("✅ RealCUGAN ready!")
+        print("✅ RealESRGAN ready!")
         self.input_name = self.session.get_inputs()[0].name
         self.output_name = self.session.get_outputs()[0].name
 
@@ -166,4 +166,4 @@ class RealESRGAN_TRT_CUDA(VideoTransformer):
             torch.cuda.empty_cache()
             torch.cuda.ipc_collect()
 
-        print("🧹 RealCUGAN memory released.")
+        print("🧹 RealESRGAN memory released.")

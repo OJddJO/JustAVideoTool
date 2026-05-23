@@ -33,8 +33,8 @@ async def run_test():
     pipeline = ModularProcessingPipeline()
 
     # 1. Instantiate the transformer class
-    tr = RealCUGAN_TRT_CUDA(onnx_model_path="../models/cugan/pro-conservative-up2x.onnx")
-    # tr = RealESRGAN_TRT_CUDA(onnx_model_path="../models/RealESRGANv2/RealESRGANv2-animevideo-xsx2.onnx")
+    # tr = RealCUGAN_TRT_CUDA(onnx_model_path="../models/cugan/pro-conservative-up2x.onnx")
+    tr = RealESRGAN_TRT_CUDA(onnx_model_path="../models/RealESRGANv2/RealESRGANv2-animevideo-xsx2.onnx")
     pipeline.add_stage(tr)
 
     # Note: Replace 'sample.mov' with an actual short video path
@@ -58,7 +58,7 @@ async def run_test():
             av_frame.to_image().save(f"testing/test_output_frame_{frame_count}.jpg")
 
             # Break after 1 frame so you don't process the whole video during a test
-            if frame_count >= 100:
+            if frame_count >= 1000:
                 print("Test complete. Check the output image.")
                 break
 
