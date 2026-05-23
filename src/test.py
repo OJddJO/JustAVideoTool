@@ -24,17 +24,17 @@ print("-----------------------------")
 import asyncio
 import av
 import numpy as np
+import time
 from modules.modular_pipeline import ModularProcessingPipeline
 from modules.realCUGAN import RealCUGAN_TRT_CUDA
 from modules.realESRGAN import RealESRGAN_TRT_CUDA
-
 
 async def run_test():
     pipeline = ModularProcessingPipeline()
 
     # 1. Instantiate the transformer class
     # tr = RealCUGAN_TRT_CUDA(onnx_model_path="../models/cugan/pro-conservative-up2x.onnx")
-    tr = RealESRGAN_TRT_CUDA(onnx_model_path="../models/RealESRGANv2/RealESRGANv2-animevideo-xsx2.onnx")
+    tr = RealESRGAN_TRT_CUDA(onnx_model_path="../models/RealESRGANv2/RealESRGANv2-animevideo-xsx2.onnx", tile_width=310, tile_height=180)
     pipeline.add_stage(tr)
 
     # Note: Replace 'sample.mov' with an actual short video path
@@ -46,6 +46,7 @@ async def run_test():
         frame_count = 0
 
         # 2. Consume the asynchronous pipeline generator
+        start = time.time_ns()
         async for frame_bytes, w, h in pipeline.stream_pipeline(input_video):
             frame_count += 1
             print(f"✅ Processed frame {frame_count} | New resolution: {w}x{h}")
@@ -61,6 +62,8 @@ async def run_test():
             if frame_count >= 1000:
                 print("Test complete. Check the output image.")
                 break
+        end = time.time_ns()
+        print(f"Took {round(end - start, 4)}")
 
     except Exception as e:
         print(f"❌ Pipeline failed: {e}")

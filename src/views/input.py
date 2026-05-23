@@ -13,6 +13,7 @@ def format_size(size_in_bytes: int) -> str:
     return f"{size_in_bytes:.2f} PB"
 
 
+@ft.control
 class FilePathField(GenericContainer):
     def __init__(self, file: ft.FilePickerFile, container: list["FilePathField"]):
         super().__init__()
@@ -59,6 +60,7 @@ class FilePathField(GenericContainer):
         return (self.filename, self.filepath, self.filesize)
 
 
+@ft.control
 class InputView(GenericView):
     def __init__(self):
         super().__init__()

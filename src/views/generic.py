@@ -1,9 +1,11 @@
 import flet as ft
 
+@ft.control
 class GenericContainer(ft.Container):
     def __init__(self):
         super().__init__(padding=10, bgcolor=ft.Colors.SURFACE, border_radius=15, shadow=ft.BoxShadow(1, 10, ft.Colors.SHADOW, ft.Offset(2, 2)), expand=True)
 
+@ft.control
 class GenericView(GenericContainer):
     def __init__(self):
         super().__init__()
@@ -11,6 +13,7 @@ class GenericView(GenericContainer):
         self.floating_action_button = None
         self.overlay = []
 
+@ft.control
 class GenericOverlay(ft.Stack):
     def __init__(self, content = ft.LayoutControl):
         super().__init__(
@@ -24,6 +27,7 @@ class GenericOverlay(ft.Stack):
         content.margin = 50
         content.wrapper = self
 
+@ft.control
 class TextField(ft.TextField):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -33,7 +37,7 @@ class TextField(ft.TextField):
         self.smart_quotes_type = False
         self.text_size = 14
 
-
+@ft.control
 class NumberInput(TextField):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

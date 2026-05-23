@@ -11,6 +11,7 @@ __all__ = [
     "RealCUGAN_Layer",
 ]
 
+@ft.control
 class TransformerLayer(GenericContainer):
     """Prototype class for all transformer UI layers"""
     def __init__(self, content: list = [], default_onnx = ""):
@@ -51,8 +52,7 @@ class TransformerLayer(GenericContainer):
     async def build_transformer(self) -> VideoTransformer:
         raise NotImplementedError("Transformer Layer shouldn't be directly used")
 
-
-
+@ft.control
 class RealESRGAN_Layer(TransformerLayer):
     desc = """A transformer for upscaling frames using RealESRGAN AI
 GAN (Generative Adversarial Network): An AI architecture where two neural networks compete against each other. One network generates realistic data from scratch, while the other tries to spot flaws, forcing the system to continuously improve until the generated results look completely authentic.
@@ -69,7 +69,7 @@ ESRGAN (Enhanced Super-Resolution GAN): Optimized for real-world photos and real
                 ),
                 ft.Icon(
                     ft.Icons.HELP_OUTLINE,
-                    tooltip="Tiling helps reducing VRAM usage.\nThe smaller the tile, the less VRAM will be used. Bigger tile padding can help avoid tearing.",
+                    tooltip="Tiling helps reducing VRAM usage at the cost of speed.\nThe smaller the tile, the less VRAM will be used. Bigger tile padding can help avoid tearing.",
                     size=18
                 )
             ]),
@@ -80,7 +80,7 @@ ESRGAN (Enhanced Super-Resolution GAN): Optimized for real-world photos and real
             ])
         ], "models/RealESRGANv2/RealESRGANv2-animevideo-xsx2.onnx")
 
-
+@ft.control
 class RealCUGAN_Layer(TransformerLayer):
     desc = """A transformer for upscaling frames using RealCUGAN AI
 GAN (Generative Adversarial Network): An AI architecture where two neural networks compete against each other. One network generates realistic data from scratch, while the other tries to spot flaws, forcing the system to continuously improve until the generated results look completely authentic.
@@ -97,7 +97,7 @@ CUGAN (Cascaded-U-Net GAN): Specifically optimized for Anime, Manga, and Cartoon
                 ),
                 ft.Icon(
                     ft.Icons.HELP_OUTLINE,
-                    tooltip="Tiling helps reducing VRAM usage.\nThe smaller the tile, the less VRAM will be used. Bigger tile padding can help avoid tearing.",
+                    tooltip="Tiling helps reducing VRAM usage at the cost of speed.\nThe smaller the tile, the less VRAM will be used. Bigger tile padding can help avoid tearing.",
                     size=18
                 )
             ]),

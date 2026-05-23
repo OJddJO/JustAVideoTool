@@ -3,6 +3,7 @@ import os
 import asyncio
 from views.generic import GenericView
 
+@ft.control
 class ConsoleView(GenericView):
     def __init__(self, log_file: str):
         super().__init__()
@@ -34,7 +35,7 @@ class ConsoleView(GenericView):
 
     async def tail_log(self):
         while not os.path.exists(self.log_file) and self.running:
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(1)
 
         if not self.running:
             return

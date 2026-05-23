@@ -22,6 +22,7 @@ transformers = {
     }
 }
 
+@ft.control
 class TransformerSelector(ft.ExpansionTile):
     def __init__(self, adder: MethodType, type: str, name: str):
         super().__init__(ft.Row([
@@ -38,6 +39,7 @@ class TransformerSelector(ft.ExpansionTile):
     async def add(self, e: ft.Event[ft.Button]):
         await self.adder(e, self.type, self.name)
 
+@ft.control
 class TransformerCategory(GenericContainer):
     def __init__(self, adder: MethodType, type: str):
         super().__init__()
@@ -60,6 +62,7 @@ class TransformerCategory(GenericContainer):
             ),
         )
 
+@ft.control
 class SelectorView(GenericView):
     def __init__(self, transfromers_container: list[TransformerLayer]):
         super().__init__()
@@ -91,7 +94,7 @@ class SelectorView(GenericView):
         self.transformers_container.append(transformers[type]["tr"][name]["class"]())
         await self.hide(e)
 
-
+@ft.control
 class TransformView(GenericView):
     def __init__(self):
         super().__init__()
