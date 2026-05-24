@@ -33,12 +33,12 @@ async def run_test():
     pipeline = ModularProcessingPipeline()
 
     # 1. Instantiate the transformer class
-    # tr = RealCUGAN_TRT_CUDA(onnx_model_path="../models/cugan/pro-conservative-up2x.onnx")
-    tr = RealESRGAN_TRT_CUDA(onnx_model_path="../models/RealESRGANv2/RealESRGANv2-animevideo-xsx2.onnx", tile_width=310, tile_height=180)
+    tr = RealCUGAN_TRT_CUDA(onnx_model_path="../models/cugan/pro-conservative-up2x.onnx", tile_width=960, tile_height=540, tile_pad=32)
+    # tr = RealESRGAN_TRT_CUDA(onnx_model_path="../models/RealESRGANv2/RealESRGANv2-animevideo-xsx2.onnx", tile_width=310, tile_height=180)
     pipeline.add_stage(tr)
 
     # Note: Replace 'sample.mov' with an actual short video path
-    input_video = "sample.mp4"
+    input_video = "sample.mkv"
     print(f"Starting pipeline on {input_video}...")
     os.makedirs("testing", exist_ok=True)
 
@@ -69,7 +69,7 @@ async def run_test():
         print(f"❌ Pipeline failed: {e}")
 
     finally:
-        pipeline.clean_memory()
+        await pipeline.clean_memory()
 
 if __name__ == "__main__":
     asyncio.run(run_test())

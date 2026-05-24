@@ -5,7 +5,7 @@ import numpy as np
 from modules.video_transformer import VideoTransformer
 
 class ModularProcessingPipeline:
-    def __init__(self, batch_size: int = 24):
+    def __init__(self, batch_size: int = 32):
         self.transformers: list[VideoTransformer] = []
         self.batch_size = batch_size
 
@@ -46,7 +46,6 @@ class ModularProcessingPipeline:
                         yield processed_frame.tobytes(), w, h
 
                     batch.clear()
-                    await asyncio.sleep(0)
 
             # Process the remaining frames
             if batch:

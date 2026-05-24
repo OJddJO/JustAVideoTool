@@ -1,23 +1,28 @@
 import flet as ft
 from types import MethodType
-from views.generic import GenericContainer, GenericView, GenericOverlay
+from views.generic import GenericContainer, GenericView, GenericOverlay, NumberInput
 from views.transformers import *
+from modules.modular_pipeline import ModularProcessingPipeline
 
 __all__ = ["TransformView"]
 
-transformers = {
+TransformersDictType = dict[
+    str: dict[
+        "desc": str,
+        "icon": ft.IconData,
+        "tr": dict[
+            str: TransformerLayer
+        ]
+    ]
+]
+
+transformers: TransformersDictType = {
     "Upscalers": {
         "desc": "Increases frame resolution to produce sharp, high-definition output",
         "icon": ft.Icons.IMAGE_ASPECT_RATIO,
         "tr": {
-            "RealESRGAN": {
-                "desc": RealESRGAN_Layer.desc,
-                "class": RealESRGAN_Layer
-            },
-            "RealCUGAN": {
-                "desc": RealCUGAN_Layer.desc,
-                "class": RealCUGAN_Layer
-            },
+            "RealESRGAN": RealESRGAN_Layer,
+            "RealCUGAN": RealCUGAN_Layer,
         }
     }
 }
@@ -29,7 +34,7 @@ class TransformerSelector(ft.ExpansionTile):
             ft.Text(name, weight=ft.FontWeight.BOLD, expand=True),
             ft.IconButton(icon=ft.Icons.ADD_OUTLINED, on_click=self.add)
         ]))
-        self.controls=ft.Text(transformers[type]["tr"][name]["desc"])
+        self.controls=ft.Text(transformers[type]["tr"][name].desc)
         self.controls_padding = 10
         self.expanded = False
         self.adder = adder
@@ -64,7 +69,7 @@ class TransformerCategory(GenericContainer):
 
 @ft.control
 class SelectorView(GenericView):
-    def __init__(self, transfromers_container: list[TransformerLayer]):
+    def __init__(self, transformers_container: list[TransformerLayer]):
         super().__init__()
         self.wrapper: GenericOverlay
         self.content = ft.Column(
@@ -85,14 +90,33 @@ class SelectorView(GenericView):
             ],
             expand=True
         )
-        self.transformers_container = transfromers_container
+        self.transformers_container = transformers_container
 
     async def hide(self, e: ft.Event[ft.Button] = None):
         self.wrapper.visible = False
 
     async def add_transformer(self, e: ft.Event[ft.Button], type: str, name: str):
-        self.transformers_container.append(transformers[type]["tr"][name]["class"]())
+        self.transformers_container.append(transformers[type]["tr"][name](self.transformers_container))
         await self.hide(e)
+
+@ft.control
+class PipelineParams(GenericContainer):
+    def __init__(self):
+        super().__init__()
+        self.batch_size = NumberInput(value="32", label="Batch size", expand=True)
+        self.expand = False
+        self.bgcolor = ft.Colors.SURFACE_CONTAINER
+        self.margin = ft.Margin(left=10, right=10)
+        self.padding = 15
+        self.content = ft.Column(
+            [
+                ft.Row([
+                    ft.Text("Frame batching", size=16, weight=ft.FontWeight.BOLD),
+                    ft.Icon(ft.Icons.HELP_OUTLINE, size=18, tooltip="Increasing batch size can improve performance, but uses more RAM"),
+                    self.batch_size,
+                ], expand=True)
+            ],
+        )
 
 @ft.control
 class TransformView(GenericView):
@@ -101,8 +125,8 @@ class TransformView(GenericView):
 
         clear_transformers_dialog = ft.AlertDialog(
             modal=True,
-            title=ft.Text("Confirm"),
-            content=ft.Text("Are you sure you want to clear the current selection ?"),
+            title=ft.Text("Confirm", weight=ft.FontWeight.BOLD),
+            content=ft.Text("Are you sure you want to clear all transformers ?"),
             actions=[
                 ft.TextButton(ft.Text("Confirm", weight=ft.FontWeight.BOLD, color=ft.Colors.RED_300), on_click=self.handle_clear_transformers),
                 ft.TextButton("Cancel", on_click=lambda e: self.page.pop_dialog())
@@ -113,10 +137,13 @@ class TransformView(GenericView):
         self.transformers: list[TransformerLayer] = []
         self.selector_view = SelectorView(self.transformers)
         self.selector_view_wrapper = GenericOverlay(self.selector_view)
+        self.pipeline_params = PipelineParams()
         self.overlay = [self.selector_view_wrapper]
         self.content = ft.Column(
             [
                 ft.Text("Transform", size=28, weight=ft.FontWeight.BOLD),
+                self.pipeline_params,
+                ft.Divider(),
                 ft.ReorderableListView(
                     expand=True,
                     show_default_drag_handles=False,
@@ -146,3 +173,17 @@ class TransformView(GenericView):
         element = self.transformers.pop(e.old_index)
         self.transformers.insert(e.new_index, element)
         e.control.update()
+
+    async def build_pipeline(self) -> ModularProcessingPipeline | None:
+        if not self.transformers:
+            return None
+
+        pipeline = ModularProcessingPipeline(
+            int(self.pipeline_params.batch_size.value)
+        )
+
+        for e in self.transformers:
+            layer = await e.build_transformer()
+            pipeline.add_stage(layer)
+
+        return pipeline

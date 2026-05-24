@@ -71,7 +71,7 @@ class InputView(GenericView):
 
         clear_selection_dialog = ft.AlertDialog(
             modal=True,
-            title=ft.Text("Confirm"),
+            title=ft.Text("Confirm", weight=ft.FontWeight.BOLD),
             content=ft.Text("Are you sure you want to clear the current selection ?"),
             actions=[
                 ft.TextButton(ft.Text("Confirm", weight=ft.FontWeight.BOLD, color=ft.Colors.RED_300), on_click=self.handle_clear_selection),

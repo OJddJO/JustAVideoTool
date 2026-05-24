@@ -10,7 +10,6 @@ class GenericView(GenericContainer):
     def __init__(self):
         super().__init__()
         self.padding = 20
-        self.floating_action_button = None
         self.overlay = []
 
 @ft.control

@@ -8,7 +8,7 @@ import gc
 from modules.video_transformer import VideoTransformer
 
 class RealCUGAN_TRT_CUDA(VideoTransformer):
-    def __init__(self, onnx_model_path="models/cugan/pro-conservative-up2x.onnx", cache_dir="trt_cache", tile_width=620, tile_height=360, tile_pad=64, scale=2):
+    def __init__(self, onnx_model_path="models/cugan/pro-conservative-up2x.onnx", cache_dir="trt_cache", tile_width=620, tile_height=360, tile_pad=32, scale=2):
         self.onnx_model_path = onnx_model_path
         self.cache_dir = cache_dir
         self.session = None

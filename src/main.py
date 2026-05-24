@@ -1,6 +1,6 @@
 import flet as ft
 from enum import IntEnum
-from views.generic import GenericView, GenericOverlay
+from views.generic import GenericView
 from views.input import InputView
 from views.transform import TransformView
 from views.encoding import EncodingView
@@ -27,7 +27,6 @@ class VideoTool:
 
     async def evHandler_navbar(self, e: ft.Event[ft.NavigationRail]):
         self.view_container.content = self.views_map[e.control.selected_index]
-        self.page.floating_action_button = self.views_map[e.control.selected_index].floating_action_button
         self.page.overlay.clear()
         self.page.overlay.extend(self.views_map[e.control.selected_index].overlay)
 
