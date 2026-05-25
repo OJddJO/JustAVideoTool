@@ -16,7 +16,7 @@ class TransformerLayer(GenericContainer):
     """Prototype class for all transformer UI layers"""
     desc = ""
 
-    def __init__(self, container: list["TransformerLayer"], name: str, content: list = [], default_onnx = ""):
+    def __init__(self, container: list["TransformerLayer"], title: list[ft.Control], default_onnx = "", content: list = [], advanced_settings: list = []):
         super().__init__()
         self.container = container
         self.file_picker = ft.FilePicker()
@@ -29,9 +29,8 @@ class TransformerLayer(GenericContainer):
                 ),
                 ft.Column(
                     [
-                        ft.Row([
-                            ft.Text(name, size=20, weight=ft.FontWeight.BOLD, expand=True),
-                            ft.Button("Remove transformer", icon=ft.Icons.REMOVE, icon_color=ft.Colors.RED_300, color=ft.Colors.RED_300, on_click=self.remove)
+                        ft.Row(title + [
+                            ft.Button("Remove", icon=ft.Icons.REMOVE, icon_color=ft.Colors.RED_300, color=ft.Colors.RED_300, on_click=self.remove)
                         ]),
                         ft.Divider(),
                         ft.Row([
@@ -39,7 +38,21 @@ class TransformerLayer(GenericContainer):
                             self.onnx_model_path,
                             ft.Button("Select ONNX", icon=ft.Icons.FOLDER_OPEN_OUTLINED, on_click=self.select_onnx)
                         ], expand=True)
-                    ] + content,
+                    ]
+                    + content
+                    + ([
+                        ft.Divider(),
+                        ft.ExpansionTile(
+                            title="Advanced Settings",
+                            leading=ft.Icon(ft.Icons.SETTINGS_OUTLINED, size=18),
+                            controls=ft.Column(advanced_settings),
+                            dense=True,
+                            expanded=False,
+                            shape=ft.RoundedRectangleBorder(radius=0),
+                            collapsed_shape=ft.RoundedRectangleBorder(radius=0),
+                            controls_padding=ft.Padding(top=10),
+                        )
+                    ] if advanced_settings else []),
                     expand=True,
                     margin=5
                 )
@@ -76,8 +89,8 @@ ESRGAN (Enhanced Super-Resolution GAN): Optimized for real-world photos and real
         self.scale_factor = NumberInput(value="2", label="Scale factor", expand=True)
         self.cache_dir = TextField(label="Cache path", expand=True, value="cache/RealESRGAN")
         super().__init__(
-            container,
-            "RealESRGAN",
+            container=container,
+            title=[ft.Icon(ft.Icons.IMAGE_ASPECT_RATIO), ft.Text("RealESRGAN", size=20, weight=ft.FontWeight.BOLD, expand=True)],
             default_onnx="models/RealESRGANv2/RealESRGANv2-animevideo-xsx2.onnx",
             content=[
                 ft.Divider(),
@@ -98,23 +111,13 @@ ESRGAN (Enhanced Super-Resolution GAN): Optimized for real-world photos and real
                     ft.Icon(ft.Icons.HELP_OUTLINE, size=18, tooltip="Please choose the correct model if modifying the scale factor."),
                     self.scale_factor
                 ], expand=True),
-                ft.Divider(),
-                ft.ExpansionTile(
-                    title="Advanced Settings",
-                    controls=ft.Column(
-                        [
-                            ft.Text("Cache directory", size=16, weight=ft.FontWeight.BOLD),
-                            ft.Row([
-                                self.cache_dir,
-                                ft.Button("Choose directory", icon=ft.Icons.FOLDER_OPEN_OUTLINED, on_click=self.choose_cache_dir)
-                            ],expand=True)
-                        ]
-                    ),
-                    dense=True,
-                    expanded=False,
-                    shape=ft.RoundedRectangleBorder(radius=0),
-                    collapsed_shape=ft.RoundedRectangleBorder(radius=0),
-                )
+            ],
+            advanced_settings=[
+                ft.Row([
+                    ft.Text("Cache directory", size=16, weight=ft.FontWeight.BOLD),
+                    self.cache_dir,
+                    ft.Button("Choose directory", icon=ft.Icons.FOLDER_OPEN_OUTLINED, on_click=self.choose_cache_dir)
+                ],expand=True)
             ]
         )
 
@@ -147,7 +150,7 @@ CUGAN (Cascaded-U-Net GAN): Specifically optimized for Anime, Manga, and Cartoon
         self.cache_dir = TextField(label="Cache path", expand=True, value="cache/RealCUGAN")
         super().__init__(
             container,
-            "RealCUGAN",
+            title = [ft.Icon(ft.Icons.IMAGE_ASPECT_RATIO), ft.Text("RealESRGAN", size=20, weight=ft.FontWeight.BOLD, expand=True)],
             default_onnx="models/cugan/pro-conservative-up2x.onnx",
             content=[
                 ft.Divider(),
@@ -173,24 +176,14 @@ CUGAN (Cascaded-U-Net GAN): Specifically optimized for Anime, Manga, and Cartoon
                     ft.Text("Scale factor", size=16, weight=ft.FontWeight.BOLD),
                     ft.Icon(ft.Icons.HELP_OUTLINE, size=18, tooltip="Please choose the correct model if modifying the scale factor."),
                     self.scale_factor
-                ], expand=True),
-                ft.Divider(),
-                ft.ExpansionTile(
-                    title="Advanced Settings",
-                    controls=ft.Column(
-                        [
-                            ft.Row([
-                                ft.Text("Cache directory", size=16, weight=ft.FontWeight.BOLD),
-                                self.cache_dir,
-                                ft.Button("Choose directory", icon=ft.Icons.FOLDER_OPEN_OUTLINED, on_click=self.choose_cache_dir)
-                            ], expand=True)
-                        ]
-                    ),
-                    dense=True,
-                    expanded=False,
-                    shape=ft.RoundedRectangleBorder(radius=0),
-                    collapsed_shape=ft.RoundedRectangleBorder(radius=0),
-                )
+                ], expand=True)
+            ],
+            advanced_settings=[
+                ft.Row([
+                    ft.Text("Cache directory", size=16, weight=ft.FontWeight.BOLD),
+                    self.cache_dir,
+                    ft.Button("Choose directory", icon=ft.Icons.FOLDER_OPEN_OUTLINED, on_click=self.choose_cache_dir)
+                ],expand=True)
             ]
         )
 

@@ -8,7 +8,7 @@ import gc
 from modules.video_transformer import VideoTransformer
 
 class RealESRGAN_TRT_CUDA(VideoTransformer):
-    def __init__(self, onnx_model_path="models/RealESRGANv2/RealESRGANv2-animevideo-xsx2.onnx", cache_dir="trt_cache", tile_width=620, tile_height=360, tile_pad=32, scale=2):
+    def __init__(self, onnx_model_path="models/RealESRGANv2/RealESRGANv2-animevideo-xsx2.onnx", cache_dir="trt_cache/RealESRGAN", tile_width=620, tile_height=360, tile_pad=32, scale=2):
         self.onnx_model_path = onnx_model_path
         self.cache_dir = cache_dir
         self.session = None
@@ -37,7 +37,7 @@ class RealESRGAN_TRT_CUDA(VideoTransformer):
                 'trt_max_workspace_size': 4294967296,
                 'trt_fp16_enable': True,
                 'trt_engine_cache_enable': True,
-                'trt_engine_cache_path': self.cache_dir,
+                'trt_engine_cache_path': os.path.join(self.cache_dir, f"{dim_w}x{dim_h}"),
                 'trt_profile_min_shapes': shape_str,
                 'trt_profile_opt_shapes': shape_str,
                 'trt_profile_max_shapes': shape_str,

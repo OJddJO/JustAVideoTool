@@ -1,6 +1,8 @@
 import flet as ft
 import os
 import subprocess
+import json
+import asyncio
 from views.generic import GenericView, GenericContainer
 
 __all__ = ["InputView"]
@@ -13,14 +15,154 @@ def format_size(size_in_bytes: int) -> str:
     return f"{size_in_bytes:.2f} PB"
 
 
+def get_icon_from_stream_type(type: str):
+    match type:
+        case "video":
+            return ft.Icons.MOVIE_OUTLINED
+        case "audio":
+            return ft.Icons.MUSIC_NOTE_OUTLINED
+        case "subtitle":
+            return ft.Icons.SUBTITLES_OUTLINED
+        case _:
+            return ft.Icons.DATA_OBJECT_OUTLINED
+
+
+@ft.control
+class StreamMetadata(ft.Column):
+    def __init__(self, metadata: dict, content: list = []):
+        super().__init__()
+        self.controls = [
+            ft.Row([
+                ft.Text("Codec:", weight=ft.FontWeight.BOLD, size=16),
+                ft.Text(f"{metadata.get('codec_name', 'unknown')}, {metadata.get('codec_long_name', 'unknown')}"),
+            ]),
+            ft.Row([
+                ft.Text("Type:", weight=ft.FontWeight.BOLD, size=16),
+                ft.Text(metadata.get("codec_type", "unknown")),
+            ])
+        ] + content
+        self.expand = True
+        self.margin = 10
+
+
+@ft.control
+class VideoStreamMetadata(StreamMetadata):
+    def __init__(self, metadata: dict):
+        super().__init__(
+            metadata,
+            [
+                ft.Row([
+                    ft.Text("Width:", size=16, weight=ft.FontWeight.BOLD),
+                    ft.Text(metadata.get("width", "unknown")),
+                ]),
+                ft.Row([
+                    ft.Text("Height:", size=16, weight=ft.FontWeight.BOLD),
+                    ft.Text(metadata.get("height", "unknown"))
+                ]),
+                ft.Row([
+                    ft.Text("FPS:", size=16, weight=ft.FontWeight.BOLD),
+                    ft.Text(metadata.get("avg_frame_rate", "unknown"))
+                ]),
+                ft.Row([
+                    ft.Text("Pixel format:", size=16, weight=ft.FontWeight.BOLD),
+                    ft.Text(metadata.get("pix_fmt", "unknown"))
+                ])
+            ]
+        )
+
+@ft.control
+class AudioStreamMetadata(StreamMetadata):
+    def __init__(self, metadata: dict):
+        super().__init__(
+            metadata,
+            [
+                ft.Row([
+                    ft.Text("Title:", size=16, weight=ft.FontWeight.BOLD),
+                    ft.Text(metadata.get('tags', {}).get('title', ""))
+                ]),
+                ft.Row([
+                    ft.Text("Language:", size=16, weight=ft.FontWeight.BOLD),
+                    ft.Text(metadata.get('tags', {}).get('language', 'unknown'))
+                ]),
+                ft.Row([
+                    ft.Text("Sample rate:", size=16, weight=ft.FontWeight.BOLD),
+                    ft.Text(metadata.get("sample_rate", "unknown"))
+                ]),
+                ft.Row([
+                    ft.Text("Channels:", size=16, weight=ft.FontWeight.BOLD),
+                    ft.Text(metadata.get("channels", "unknown"))
+                ]),
+                ft.Row([
+                    ft.Text("Channel layout:", size=16, weight=ft.FontWeight.BOLD),
+                    ft.Text(metadata.get("channel_layout", "unknown"))
+                ])
+            ]
+        )
+
+@ft.control
+class SubtitleStreamMetadata(StreamMetadata):
+    def __init__(self, metadata: dict):
+        super().__init__(
+            metadata,
+            [
+                ft.Row([
+                    ft.Text("Title:", size=16, weight=ft.FontWeight.BOLD),
+                    ft.Text(metadata.get('tags', {}).get('title', ""))
+                ]),
+                ft.Row([
+                    ft.Text("Language:", size=16, weight=ft.FontWeight.BOLD),
+                    ft.Text(metadata.get('tags', {}).get('language', 'unknown'))
+                ]),
+            ]
+        )
+
+
+def build_metadata_view(type: str, metadata: dict):
+    match type:
+        case "video":
+            return VideoStreamMetadata(metadata)
+        case "audio":
+            return AudioStreamMetadata(metadata)
+        case "subtitle":
+            return SubtitleStreamMetadata(metadata)
+        case _:
+            return StreamMetadata(metadata)
+
+
+@ft.control
+class FileMetadata(ft.Tabs):
+    def __init__(self, metadata: dict):
+        super().__init__(
+            length = len(metadata["streams"]),
+            content = ft.Column(
+                controls=[
+                    ft.TabBar(
+                        tabs=[
+                            ft.Tab(
+                                label=f"Stream {s['index']}",
+                                icon=ft.Icon(get_icon_from_stream_type(s.get("codec_type", "")), size=18)
+                            ) for s in metadata["streams"]
+                        ]
+                    ),
+                    ft.TabBarView(
+                        controls=[ build_metadata_view(s.get("codec_type", ""), s) for s in metadata["streams"] ],
+                        height=200,
+                    )
+                ]
+            ),
+            margin=ft.Margin(top=10)
+        )
+
+
 @ft.control
 class FilePathField(GenericContainer):
-    def __init__(self, file: ft.FilePickerFile, container: list["FilePathField"]):
+    def __init__(self, container: list["FilePathField"], file: ft.FilePickerFile, metadata: dict):
         super().__init__()
         self.bgcolor = ft.Colors.SURFACE_CONTAINER
         self.filepath = file.path
         self.filename = file.name
         self.filesize = file.size
+        self.metadata = metadata
 
         self.container = container
 
@@ -42,8 +184,10 @@ class FilePathField(GenericContainer):
                     ft.Button("Open in explorer", icon=ft.Icons.FOLDER_OPEN, expand=True, on_click=self.open_in_explorer),
                     ft.Button("Remove from selection", icon=ft.Icons.REMOVE, expand=True, icon_color=ft.Colors.RED_300,
                                 color=ft.Colors.RED_300, on_click=self.remove_from_container)
-                ])
+                ]),
+                FileMetadata(metadata)
             ],
+            controls_padding=ft.Padding(top=10),
         )
 
     async def open_in_explorer(self, e: ft.Event[ft.Button]):
@@ -111,7 +255,25 @@ class InputView(GenericView):
         for file in files:
             if (file.name, file.path, file.size) in existing_paths:
                 continue
-            self.picked_file_paths.append(FilePathField(file, self.picked_file_paths))
+            if not os.path.exists(str(file.path)):
+                continue
+
+            ffprobe_cmd = (
+                'ffprobe',
+                '-v', 'quiet',
+                '-print_format', 'json',
+                '-show_streams',
+                file.path
+            )
+
+            process = await asyncio.create_subprocess_exec(
+                *ffprobe_cmd,
+                stdout=asyncio.subprocess.PIPE
+            )
+
+            stdout, _ = await process.communicate()
+            metadata = json.loads(stdout.decode('utf-8'))
+            self.picked_file_paths.append(FilePathField(self.picked_file_paths, file, metadata))
             print(f"[INFO] Added {file.name} ({file.path}) to selection")
 
         self.file_container.update()
