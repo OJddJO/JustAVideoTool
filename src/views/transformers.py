@@ -155,18 +155,12 @@ CUGAN (Cascaded-U-Net GAN): Specifically optimized for Anime, Manga, and Cartoon
             content=[
                 ft.Divider(),
                 ft.Row([
-                    ft.Text(
-                        "Tiling parameters",
-                        size=16,
-                        weight=ft.FontWeight.BOLD
-                    ),
+                    ft.Text("Tiling parameters", size=16, weight=ft.FontWeight.BOLD),
                     ft.Icon(
                         ft.Icons.HELP_OUTLINE,
                         size=18,
                         tooltip="Tiling helps reducing VRAM usage at the cost of speed.\nThe smaller the tile, the less VRAM will be used. Bigger tile padding can help avoid tearing.",
-                    )
-                ]),
-                ft.Row([
+                    ),
                     self.tile_width,
                     self.tile_height,
                     self.tile_pad

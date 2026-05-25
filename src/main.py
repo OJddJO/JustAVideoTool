@@ -18,19 +18,13 @@ class VideoTool:
         self.view_container: ft.Container = None
         self.log_file = None
 
-    async def main(self, page: ft.Page):
+    def main(self, page: ft.Page):
         self.page = page
         page.title = "Just A Video Tool"
-        log_file = await ft.StoragePaths().get_console_log_filename()
 
-        self.init_ui(log_file)
+        self.init_ui()
 
-    async def evHandler_navbar(self, e: ft.Event[ft.NavigationRail]):
-        self.view_container.content = self.views_map[e.control.selected_index]
-        self.page.overlay.clear()
-        self.page.overlay.extend(self.views_map[e.control.selected_index].overlay)
-
-    def init_ui(self, log_file: str):
+    def init_ui(self):
         self.page.theme_mode = ft.ThemeMode.DARK
         self.page.adaptive = True
 
@@ -38,7 +32,7 @@ class VideoTool:
             VideoTool.ViewIndex.INPUT: InputView(),
             VideoTool.ViewIndex.TRANSFORM: TransformView(),
             VideoTool.ViewIndex.ENCODING: EncodingView(),
-            VideoTool.ViewIndex.CONSOLE: ConsoleView(log_file)
+            VideoTool.ViewIndex.CONSOLE: ConsoleView()
         }
 
         nav_sidebar = ft.Container(
@@ -75,6 +69,11 @@ class VideoTool:
                 expand=True
             )
         )
+
+    async def evHandler_navbar(self, e: ft.Event[ft.NavigationRail]):
+        self.view_container.content = self.views_map[e.control.selected_index]
+        self.page.overlay.clear()
+        self.page.overlay.extend(self.views_map[e.control.selected_index].overlay)
 
 
 if __name__ == "__main__":

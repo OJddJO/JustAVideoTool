@@ -3,7 +3,7 @@ import os
 import subprocess
 import json
 import asyncio
-from views.generic import GenericView, GenericContainer
+from views.generic import GenericView, ViewTitle, GenericContainer, Label
 
 __all__ = ["InputView"]
 
@@ -33,11 +33,11 @@ class StreamMetadata(ft.Column):
         super().__init__()
         self.controls = [
             ft.Row([
-                ft.Text("Codec:", weight=ft.FontWeight.BOLD, size=16),
+                Label("Codec:"),
                 ft.Text(f"{metadata.get('codec_name', 'unknown')}, {metadata.get('codec_long_name', 'unknown')}"),
             ]),
             ft.Row([
-                ft.Text("Type:", weight=ft.FontWeight.BOLD, size=16),
+                Label("Type:"),
                 ft.Text(metadata.get("codec_type", "unknown")),
             ])
         ] + content
@@ -52,19 +52,19 @@ class VideoStreamMetadata(StreamMetadata):
             metadata,
             [
                 ft.Row([
-                    ft.Text("Width:", size=16, weight=ft.FontWeight.BOLD),
+                    Label("Width:"),
                     ft.Text(metadata.get("width", "unknown")),
                 ]),
                 ft.Row([
-                    ft.Text("Height:", size=16, weight=ft.FontWeight.BOLD),
+                    Label("Height:"),
                     ft.Text(metadata.get("height", "unknown"))
                 ]),
                 ft.Row([
-                    ft.Text("FPS:", size=16, weight=ft.FontWeight.BOLD),
+                    Label("FPS:"),
                     ft.Text(metadata.get("avg_frame_rate", "unknown"))
                 ]),
                 ft.Row([
-                    ft.Text("Pixel format:", size=16, weight=ft.FontWeight.BOLD),
+                    Label("Pixel format:"),
                     ft.Text(metadata.get("pix_fmt", "unknown"))
                 ])
             ]
@@ -77,23 +77,23 @@ class AudioStreamMetadata(StreamMetadata):
             metadata,
             [
                 ft.Row([
-                    ft.Text("Title:", size=16, weight=ft.FontWeight.BOLD),
+                    Label("Title:"),
                     ft.Text(metadata.get('tags', {}).get('title', ""))
                 ]),
                 ft.Row([
-                    ft.Text("Language:", size=16, weight=ft.FontWeight.BOLD),
+                    Label("Language:"),
                     ft.Text(metadata.get('tags', {}).get('language', 'unknown'))
                 ]),
                 ft.Row([
-                    ft.Text("Sample rate:", size=16, weight=ft.FontWeight.BOLD),
+                    Label("Sample rate:"),
                     ft.Text(metadata.get("sample_rate", "unknown"))
                 ]),
                 ft.Row([
-                    ft.Text("Channels:", size=16, weight=ft.FontWeight.BOLD),
+                    Label("No. of channels:"),
                     ft.Text(metadata.get("channels", "unknown"))
                 ]),
                 ft.Row([
-                    ft.Text("Channel layout:", size=16, weight=ft.FontWeight.BOLD),
+                    Label("Channel layout:"),
                     ft.Text(metadata.get("channel_layout", "unknown"))
                 ])
             ]
@@ -106,11 +106,11 @@ class SubtitleStreamMetadata(StreamMetadata):
             metadata,
             [
                 ft.Row([
-                    ft.Text("Title:", size=16, weight=ft.FontWeight.BOLD),
+                    Label("Title:"),
                     ft.Text(metadata.get('tags', {}).get('title', ""))
                 ]),
                 ft.Row([
-                    ft.Text("Language:", size=16, weight=ft.FontWeight.BOLD),
+                    Label("Language:"),
                     ft.Text(metadata.get('tags', {}).get('language', 'unknown'))
                 ]),
             ]
@@ -206,8 +206,8 @@ class FilePathField(GenericContainer):
 
 @ft.control
 class InputView(GenericView):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         self.file_picker = ft.FilePicker()
         self.picked_file_paths: list[FilePathField] = []
@@ -224,9 +224,13 @@ class InputView(GenericView):
             actions_alignment=ft.MainAxisAlignment.END,
         )
 
+        self.loading_ring = ft.ProgressRing(width=16, height=16, stroke_width=5, visible=False)
         self.content = ft.Column(
             [
-                ft.Text("Video Input", size=28, weight=ft.FontWeight.BOLD),
+                ft.Row([
+                    ViewTitle("Video Input"),
+                    self.loading_ring
+                ]),
                 self.file_container,
                 ft.Row(
                     [
@@ -246,13 +250,22 @@ class InputView(GenericView):
         self.page.pop_dialog()
 
     async def handle_file_selection(self, e: ft.Event[ft.Button]):
+        e.control.disabled = True
+        e.control.update()
+        self.loading_ring.visible = True
+        self.loading_ring.value = 0
+        self.loading_ring.update()
+
         files = await self.file_picker.pick_files(
             dialog_title="Select the videos you want to edit",
             allowed_extensions=["mp4", "mkv", "mov"] , allow_multiple=True)
 
         existing_paths = [field.get_file_attr() for field in self.picked_file_paths]
 
-        for file in files:
+        for i, file in enumerate(files):
+            self.loading_ring.value = i / len(files)
+            self.loading_ring.update()
+
             if (file.name, file.path, file.size) in existing_paths:
                 continue
             if not os.path.exists(str(file.path)):
@@ -275,5 +288,10 @@ class InputView(GenericView):
             metadata = json.loads(stdout.decode('utf-8'))
             self.picked_file_paths.append(FilePathField(self.picked_file_paths, file, metadata))
             print(f"[INFO] Added {file.name} ({file.path}) to selection")
+            self.file_container.update()
 
+        self.loading_ring.visible = False
+        self.loading_ring.update()
         self.file_container.update()
+        e.control.disabled = False
+        e.control.update()

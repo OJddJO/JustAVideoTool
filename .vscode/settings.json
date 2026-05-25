@@ -1,14 +1,17 @@
 {
     "python.analysis.exclude": [
         "**/build",
-        "**/dist"
+        "**/dist",
+        "**/venv"
     ],
     "files.watcherExclude": {
         "**/build/**": true,
-        "**/dist/**": true
+        "**/dist/**": true,
+        "**/venv/**": true,
     },
     "search.exclude": {
         "**/build/**": true,
-        "**/dist/**": true
+        "**/dist/**": true,
+        "**/venv/**": true,
     }
 }

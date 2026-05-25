@@ -120,8 +120,8 @@ class PipelineParams(GenericContainer):
 
 @ft.control
 class TransformView(GenericView):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         clear_transformers_dialog = ft.AlertDialog(
             modal=True,

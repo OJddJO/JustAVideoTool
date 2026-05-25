@@ -2,13 +2,18 @@ import flet as ft
 
 @ft.control
 class GenericContainer(ft.Container):
-    def __init__(self):
-        super().__init__(padding=10, bgcolor=ft.Colors.SURFACE, border_radius=15, shadow=ft.BoxShadow(1, 10, ft.Colors.SHADOW, ft.Offset(2, 2)), expand=True)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.padding = 10
+        self.bgcolor = ft.Colors.SURFACE
+        self.border_radius = 15
+        self.shadow = ft.BoxShadow(1, 10, ft.Colors.SHADOW, ft.Offset(2, 2))
+        self.expand = True
 
 @ft.control
 class GenericView(GenericContainer):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.padding = 20
         self.overlay = []
 
@@ -27,6 +32,13 @@ class GenericOverlay(ft.Stack):
         content.wrapper = self
 
 @ft.control
+class ViewTitle(ft.Text):
+    def __init__(self, title: str, *args, **kwargs):
+        super().__init__(title, *args, **kwargs)
+        self.size = 28
+        self.weight = ft.FontWeight.BOLD
+
+@ft.control
 class TextField(ft.TextField):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -42,3 +54,10 @@ class NumberInput(TextField):
         super().__init__(*args, **kwargs)
         self.input_filter = ft.InputFilter("[0-9]*")
         self.keyboard_type = ft.KeyboardType.NUMBER
+
+@ft.control
+class Label(ft.Text):
+    def __init__(self, label: str, *args, **kwargs):
+        super().__init__(label, *args, **kwargs)
+        self.size = 16
+        self.weight = ft.FontWeight.BOLD

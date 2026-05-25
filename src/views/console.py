@@ -1,13 +1,13 @@
 import flet as ft
 import os
 import asyncio
-from views.generic import GenericView
+from views.generic import GenericView, ViewTitle
 
 @ft.control
 class ConsoleView(GenericView):
-    def __init__(self, log_file: str):
-        super().__init__()
-        self.log_file = log_file
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.log_file = None
         self.running = False
 
         self.text_field = ft.TextField(
@@ -22,7 +22,7 @@ class ConsoleView(GenericView):
             text_size=14
         )
         self.content = ft.Column([
-            ft.Text("Console", size=28, weight=ft.FontWeight.BOLD),
+            ViewTitle("Console"),
             self.text_field
         ], expand=True)
 
@@ -34,6 +34,9 @@ class ConsoleView(GenericView):
         self.running = False
 
     async def tail_log(self):
+        if not self.log_file:
+            self.log_file = await ft.StoragePaths().get_console_log_filename()
+
         while not os.path.exists(self.log_file) and self.running:
             await asyncio.sleep(1)
 
