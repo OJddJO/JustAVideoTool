@@ -4,6 +4,7 @@ name = "just_a_video_tool"
 [tool.flet.app]
 path = "src"
 module = "main.py"
+exclude = [".git", "venv", "sample.*", "testing"]
 
 [tool.flet]
 product = "Just A Video Tool"
@@ -24,10 +25,3 @@ message = "Getting the app ready..."
 
 [tool.flet.compile]
 app = true
-packages = true
-
-[tool.flet.cleanup]
-app = true
-packages = true
-app_files = ["**/*.c", "**/*.h"]
-package_files = ["**/*.pyi"]

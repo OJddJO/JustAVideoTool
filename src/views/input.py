@@ -281,10 +281,14 @@ class InputView(GenericView):
 
             process = await asyncio.create_subprocess_exec(
                 *ffprobe_cmd,
-                stdout=asyncio.subprocess.PIPE
+                stdout=asyncio.subprocess.PIPE,
+                creationflags=subprocess.CREATE_NO_WINDOW
             )
 
             stdout, _ = await process.communicate()
+            if process.returncode != 0:
+                print(f"[ERROR] Failed to parse metadata for {file.name} ({file.path})")
+
             metadata = json.loads(stdout.decode('utf-8'))
             self.picked_file_paths.append(FilePathField(self.picked_file_paths, file, metadata))
             print(f"[INFO] Added {file.name} ({file.path}) to selection")

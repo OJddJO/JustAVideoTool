@@ -44,6 +44,7 @@ class GeneralParams(GenericContainer):
                 self.audio_custom,
                 ft.Divider(),
                 ft.Text("Video settings", size=20, weight=ft.FontWeight.BOLD),
+                ft.Row([Label("Codec:"), self.video_codec]),
                 ft.Row([
                     ft.Stack([
                         self.__video_bitrate_settings,
@@ -51,7 +52,7 @@ class GeneralParams(GenericContainer):
                     ], expand=True),
                     self.video_use_crf
                 ], expand=True),
-                ft.Row([ Label("Pixel format"), self.pixel_format, Label("Preset"), self.preset ]),
+                ft.Row([ Label("Pixel format:"), self.pixel_format, Label("Preset:"), self.preset ]),
                 self.video_custom
             ]
         )
