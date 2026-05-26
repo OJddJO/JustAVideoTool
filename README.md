@@ -11,7 +11,7 @@ The main goal is to make an app for video alterations using AI with `.onnx` mode
 
 - [ ] FINISHING THE APP
 - [ ] Non-Nvidia GPU support
-- [ ] Linux support (should be natif, but NixOS has some problems with dependencies)
+- [ ] Linux support (should be natif, but NixOS have some problems with dependencies)
 
 ## Frameworks Used
 
