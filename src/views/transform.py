@@ -48,7 +48,6 @@ class TransformerSelector(ft.ExpansionTile):
 class TransformerCategory(GenericContainer):
     def __init__(self, adder: MethodType, type: str):
         super().__init__()
-        self.bgcolor = ft.Colors.SURFACE_CONTAINER
         self.content = ft.ExpansionTile(
             title=ft.Row([
                 ft.Icon(transformers[type]["icon"]),
@@ -105,8 +104,6 @@ class PipelineParams(GenericContainer):
         super().__init__()
         self.batch_size = NumberInput(value="32", label="Batch size", expand=True)
         self.expand = False
-        self.bgcolor = ft.Colors.SURFACE_CONTAINER
-        self.padding = 15
         self.content = ft.Column(
             [
                 ft.Row([

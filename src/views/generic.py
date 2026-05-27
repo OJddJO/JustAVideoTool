@@ -4,19 +4,20 @@ import flet as ft
 class GenericContainer(ft.Container):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if not kwargs.get("padding"):
-            self.padding = 10
-        if not kwargs.get("bgcolor"):
-            self.bgcolor = ft.Colors.SURFACE
+        self.padding = 15
+        self.bgcolor = ft.Colors.SURFACE_CONTAINER
         self.border_radius = 15
         self.shadow = ft.BoxShadow(1, 10, ft.Colors.SHADOW, ft.Offset(2, 2))
         self.expand = True
+        self.margin = 10
 
 @ft.control
 class GenericView(GenericContainer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.bgcolor = ft.Colors.SURFACE
         self.padding = 20
+        self.margin = 0
         self.overlay = []
 
 @ft.control

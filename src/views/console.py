@@ -23,7 +23,6 @@ class ConsoleView(GenericView):
             GenericContainer(
                 content=self.text_field,
                 expand=True,
-                bgcolor=ft.Colors.SURFACE_CONTAINER,
             )
         ], expand=True)
 

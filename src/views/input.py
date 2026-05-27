@@ -158,7 +158,6 @@ class FileMetadata(ft.Tabs):
 class FilePathField(GenericContainer):
     def __init__(self, container: list["FilePathField"], file: ft.FilePickerFile, metadata: dict):
         super().__init__()
-        self.bgcolor = ft.Colors.SURFACE_CONTAINER
         self.filepath = file.path
         self.filename = file.name
         self.filesize = file.size
@@ -211,7 +210,7 @@ class InputView(GenericView):
 
         self.file_picker = ft.FilePicker()
         self.picked_file_paths: list[FilePathField] = []
-        self.file_container = ft.ListView(self.picked_file_paths, spacing=20, clip_behavior=ft.ClipBehavior.HARD_EDGE, expand=True)
+        self.file_container = ft.ListView(self.picked_file_paths, clip_behavior=ft.ClipBehavior.HARD_EDGE, expand=True)
 
         clear_selection_dialog = ft.AlertDialog(
             modal=True,
@@ -246,7 +245,7 @@ class InputView(GenericView):
     async def handle_clear_selection(self, e: ft.Event[ft.Button]):
         self.picked_file_paths.clear()
         self.file_container.update()
-        print("[INFO] Cleared selection")
+        print("[INFO] Cleared input selection")
         self.page.pop_dialog()
 
     async def handle_file_selection(self, e: ft.Event[ft.Button]):

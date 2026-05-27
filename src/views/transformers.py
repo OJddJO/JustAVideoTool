@@ -2,8 +2,8 @@ import flet as ft
 from views.generic import GenericContainer, TextField, NumberInput
 
 from modules.video_transformer import VideoTransformer
-from modules.realCUGAN import RealCUGAN_TRT_CUDA
-from modules.realESRGAN import RealESRGAN_TRT_CUDA
+from modules.nvidia.realCUGAN import RealCUGAN
+from modules.nvidia.realESRGAN import RealESRGAN
 
 __all__ = [
     "TransformerLayer",
@@ -58,7 +58,6 @@ class TransformerLayer(GenericContainer):
                 )
             ]
         )
-        self.bgcolor = ft.Colors.SURFACE_CONTAINER
 
     async def remove(self):
         self.container.remove(self)
@@ -126,7 +125,7 @@ ESRGAN (Enhanced Super-Resolution GAN): Optimized for real-world photos and real
             self.cache_dir.value = dir
 
     async def build_transformer(self):
-        return RealESRGAN_TRT_CUDA(
+        return RealESRGAN(
             onnx_model_path=self.onnx_model_path.value,
             cache_dir=self.cache_dir.value,
             tile_width=int(self.tile_width.value),
@@ -186,7 +185,7 @@ CUGAN (Cascaded-U-Net GAN): Specifically optimized for Anime, Manga, and Cartoon
             self.cache_dir.value = dir
 
     async def build_transformer(self):
-        return RealCUGAN_TRT_CUDA(
+        return RealCUGAN(
             onnx_model_path=self.onnx_model_path.value,
             cache_dir=self.cache_dir.value,
             tile_width=int(self.tile_width.value),

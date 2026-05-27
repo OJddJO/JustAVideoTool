@@ -26,14 +26,14 @@ import av
 import numpy as np
 import time
 from modules.modular_pipeline import ModularProcessingPipeline
-from modules.realCUGAN import RealCUGAN_TRT_CUDA
-from modules.realESRGAN import RealESRGAN_TRT_CUDA
+from modules.nvidia.realCUGAN import RealCUGAN
+from modules.nvidia.realESRGAN import RealESRGAN
 
 async def run_test():
     pipeline = ModularProcessingPipeline()
 
     # 1. Instantiate the transformer class
-    tr = RealCUGAN_TRT_CUDA(onnx_model_path="../models/cugan/pro-conservative-up2x.onnx", tile_width=960, tile_height=540, tile_pad=32)
+    tr = RealCUGAN(onnx_model_path="../models/cugan/pro-conservative-up2x.onnx", tile_width=960, tile_height=540, tile_pad=32)
     # tr = RealESRGAN_TRT_CUDA(onnx_model_path="../models/RealESRGANv2/RealESRGANv2-animevideo-xsx2.onnx", tile_width=310, tile_height=180)
     pipeline.add_stage(tr)
 

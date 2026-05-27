@@ -41,39 +41,48 @@ class EncodingView(GenericView):
         self.content = ft.Column(
             [
                 ViewTitle("Encoding"),
-                GenericContainer(
-                    content=ft.Column(
-                        [
-                            ft.Row([ Label("Outputs extension"), self.output_extension ]),
-                            ft.Divider(),
-                            ft.Text("Video settings", size=20, weight=ft.FontWeight.BOLD),
-                            ft.Row([Label("Codec"), self.video_codec]),
-                            ft.Row([
-                                ft.Stack([
-                                    self.__video_bitrate_settings,
-                                    self.__video_crf_settings
-                                ], expand=True),
-                                ft.Divider(),
-                                self.video_use_crf
+                ft.ListView(
+                    controls=[
+                        GenericContainer(
+                            content=ft.Column([
+                                ft.Text("General", size=20, weight=ft.FontWeight.BOLD),
+                                ft.Row([ Label("Outputs extension"), self.output_extension ])
                             ], expand=True),
-                            ft.Row([ Label("Pixel format"), self.video_pixel_format, ft.VerticalDivider() , Label("Preset"), self.video_preset ]),
-                            self.video_custom,
-                            ft.Divider(),
-                            ft.Text("Audio settings", size=20, weight=ft.FontWeight.BOLD),
-                            ft.Row([ Label("Codec"), self.audio_codec ]),
-                            ft.Row([ Label("Bitrate"), self.audio_bitrate, ft.VerticalDivider(), Label("Sample rate"), self.audio_samplerate ]),
-                            ft.Row([ Label("Filter"), self.audio_filter ]),
-                            self.audio_custom,
-                            ft.Divider(),
-                            ft.Text("Sutitle settings", size=20, weight=ft.FontWeight.BOLD),
-                            ft.Row([ Label("Codec"), self.subtitle_codec ]),
-                            self.subtitle_custom
-                        ],
-                        scroll=ft.ScrollMode.ADAPTIVE,
-                    ),
-                    bgcolor=ft.Colors.SURFACE_CONTAINER,
+                        ),
+                        GenericContainer(
+                            content=ft.Column([
+                                ft.Text("Video settings", size=20, weight=ft.FontWeight.BOLD),
+                                ft.Row([Label("Codec"), self.video_codec]),
+                                ft.Row([
+                                    ft.Stack([
+                                        self.__video_bitrate_settings,
+                                        self.__video_crf_settings
+                                    ], expand=True),
+                                    ft.Divider(),
+                                    self.video_use_crf
+                                ], expand=True),
+                                ft.Row([ Label("Pixel format"), self.video_pixel_format, ft.VerticalDivider() , Label("Preset"), self.video_preset ]),
+                                self.video_custom,
+                            ], expand=True),
+                        ),
+                        GenericContainer(
+                            content=ft.Column([
+                                ft.Text("Audio settings", size=20, weight=ft.FontWeight.BOLD),
+                                ft.Row([ Label("Codec"), self.audio_codec ]),
+                                ft.Row([ Label("Bitrate"), self.audio_bitrate, ft.VerticalDivider(), Label("Sample rate"), self.audio_samplerate ]),
+                                ft.Row([ Label("Filter"), self.audio_filter ]),
+                                self.audio_custom,
+                            ], expand=True),
+                        ),
+                        GenericContainer(
+                            content=ft.Column([
+                                ft.Text("Sutitle settings", size=20, weight=ft.FontWeight.BOLD),
+                                ft.Row([ Label("Codec"), self.subtitle_codec ]),
+                                self.subtitle_custom
+                            ], expand=True),
+                        )
+                    ],
                     expand=True,
-                    padding=15
                 ),
                 ft.Row([
                     ft.Button("Load parameters", icon=ft.Icons.FILE_OPEN_OUTLINED, on_click=self.load_params),

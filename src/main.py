@@ -1,31 +1,4 @@
-import os, sys, glob
-
-print("--- Registering DLL Paths ---")
-search_pattern = os.path.join(sys.prefix, "**", "site-packages")
-matches = glob.glob(search_pattern, recursive=True)
-
-if matches:
-    site_packages = matches[0]
-    print(f"Discovered site-packages at: {site_packages}")
-else:
-    print("Could not locate site-packages using this pattern layout.")
-
-# Check for TRT paths
-for trt_dir in ["tensorrt", "tensorrt_libs", "tensorrt_bindings"]:
-    p = os.path.join(site_packages, trt_dir)
-    if os.path.exists(p):
-        print(f"Found TRT path: {p}")
-        os.add_dll_directory(p)
-        os.environ["PATH"] = p + os.pathsep + os.environ.get("PATH", "")
-
-# Check for CUDA/cuDNN paths
-nvidia_bins = glob.glob(os.path.join(site_packages, "nvidia", "*", "bin"))
-for p in nvidia_bins:
-    if os.path.exists(p):
-        print(f"Found NVIDIA path: {p}")
-        os.add_dll_directory(p)
-        os.environ["PATH"] = p + os.pathsep + os.environ.get("PATH", "")
-print("\n")
+import modules.setup
 
 import flet as ft
 from enum import IntEnum
@@ -35,13 +8,13 @@ from views.transform import TransformView
 from views.encoding import EncodingView
 from views.console import ConsoleView
 
-class VideoTool:
-    class ViewIndex(IntEnum):
-        INPUT = 0
-        TRANSFORM = 1
-        ENCODING = 2
-        CONSOLE = 3
+class ViewIndex(IntEnum):
+    INPUT = 0
+    TRANSFORM = 1
+    ENCODING = 2
+    CONSOLE = 3
 
+class VideoTool:
     def __init__(self):
         self.views_map: dict[int, GenericView] = {}
         self.view_container: ft.Container = None
@@ -58,10 +31,10 @@ class VideoTool:
         self.page.adaptive = True
 
         self.views_map = {
-            VideoTool.ViewIndex.INPUT: InputView(),
-            VideoTool.ViewIndex.TRANSFORM: TransformView(),
-            VideoTool.ViewIndex.ENCODING: EncodingView(),
-            VideoTool.ViewIndex.CONSOLE: ConsoleView()
+            ViewIndex.INPUT: InputView(),
+            ViewIndex.TRANSFORM: TransformView(),
+            ViewIndex.ENCODING: EncodingView(),
+            ViewIndex.CONSOLE: ConsoleView()
         }
 
         nav_sidebar = ft.Container(
