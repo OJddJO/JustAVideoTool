@@ -6,7 +6,7 @@ from views.generic import GenericView
 from views.input import InputView
 from views.transform import TransformView
 from views.encoding import EncodingView
-from views.console import ConsoleView
+from views.run import RunView
 
 class ViewIndex(IntEnum):
     INPUT = 0
@@ -34,7 +34,7 @@ class VideoTool:
             ViewIndex.INPUT: InputView(),
             ViewIndex.TRANSFORM: TransformView(),
             ViewIndex.ENCODING: EncodingView(),
-            ViewIndex.CONSOLE: ConsoleView()
+            ViewIndex.CONSOLE: RunView()
         }
 
         nav_sidebar = ft.Container(
@@ -45,7 +45,7 @@ class VideoTool:
                     ft.NavigationRailDestination(icon=ft.Icons.VIDEO_FILE_OUTLINED, label="Input"),
                     ft.NavigationRailDestination(icon=ft.Icons.MOVIE_EDIT, label="Transform"),
                     ft.NavigationRailDestination(icon=ft.Icons.VIDEO_SETTINGS, label="Encoding"),
-                    ft.NavigationRailDestination(icon=ft.Icons.TERMINAL_ROUNDED, label="Console")
+                    ft.NavigationRailDestination(icon=ft.Icons.TERMINAL_ROUNDED, label="Run")
                 ],
                 on_change=self.evHandler_navbar,
                 expand=True,

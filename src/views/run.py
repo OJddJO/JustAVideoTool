@@ -4,7 +4,7 @@ import asyncio
 from views.generic import GenericView, GenericContainer, ViewTitle, TextField
 
 @ft.control
-class ConsoleView(GenericView):
+class RunView(GenericView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.log_file = None
