@@ -211,7 +211,7 @@ class InputView(GenericView):
 
         self.file_picker = ft.FilePicker()
         self.picked_file_paths: list[FilePathField] = []
-        self.file_container = ft.ListView(self.picked_file_paths, spacing=20, padding=10, clip_behavior=ft.ClipBehavior.HARD_EDGE, expand=True)
+        self.file_container = ft.ListView(self.picked_file_paths, spacing=20, clip_behavior=ft.ClipBehavior.HARD_EDGE, expand=True)
 
         clear_selection_dialog = ft.AlertDialog(
             modal=True,

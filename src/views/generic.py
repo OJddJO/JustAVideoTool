@@ -4,8 +4,10 @@ import flet as ft
 class GenericContainer(ft.Container):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.padding = 10
-        self.bgcolor = ft.Colors.SURFACE
+        if not kwargs.get("padding"):
+            self.padding = 10
+        if not kwargs.get("bgcolor"):
+            self.bgcolor = ft.Colors.SURFACE
         self.border_radius = 15
         self.shadow = ft.BoxShadow(1, 10, ft.Colors.SHADOW, ft.Offset(2, 2))
         self.expand = True

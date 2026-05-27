@@ -106,7 +106,6 @@ class PipelineParams(GenericContainer):
         self.batch_size = NumberInput(value="32", label="Batch size", expand=True)
         self.expand = False
         self.bgcolor = ft.Colors.SURFACE_CONTAINER
-        self.margin = ft.Margin(left=10, right=10)
         self.padding = 15
         self.content = ft.Column(
             [

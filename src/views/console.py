@@ -1,7 +1,7 @@
 import flet as ft
 import os
 import asyncio
-from views.generic import GenericView, ViewTitle
+from views.generic import GenericView, GenericContainer, ViewTitle, TextField
 
 @ft.control
 class ConsoleView(GenericView):
@@ -10,20 +10,21 @@ class ConsoleView(GenericView):
         self.log_file = None
         self.running = False
 
-        self.text_field = ft.TextField(
+        self.text_field = TextField(
+            expand=True,
             multiline=True,
             read_only=True,
-            expand=True,
             border_color=ft.Colors.TRANSPARENT,
-            filled=True,
-            fill_color=ft.Colors.SURFACE_CONTAINER,
-            hover_color=ft.Colors.SURFACE_CONTAINER,
             border_radius=15,
             text_size=14
         )
         self.content = ft.Column([
             ViewTitle("Console"),
-            self.text_field
+            GenericContainer(
+                content=self.text_field,
+                expand=True,
+                bgcolor=ft.Colors.SURFACE_CONTAINER,
+            )
         ], expand=True)
 
     def did_mount(self):

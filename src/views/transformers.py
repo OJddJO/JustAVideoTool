@@ -59,7 +59,6 @@ class TransformerLayer(GenericContainer):
             ]
         )
         self.bgcolor = ft.Colors.SURFACE_CONTAINER
-        self.margin = 10
 
     async def remove(self):
         self.container.remove(self)
