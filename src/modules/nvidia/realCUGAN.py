@@ -8,7 +8,7 @@ import gc
 from modules.video_transformer import VideoTransformer
 
 class RealCUGAN(VideoTransformer):
-    def __init__(self, onnx_model_path="models/cugan/pro-conservative-up2x.onnx", cache_dir="trt_cache/RealCUGAN", tile_width=620, tile_height=360, tile_pad=32, scale=2):
+    def __init__(self, onnx_model_path="models/cugan/pro-conservative-up2x.onnx", cache_dir="trt_cache", tile_width=620, tile_height=360, tile_pad=32, scale=2):
         self.onnx_model_path = onnx_model_path
         self.cache_dir = cache_dir
         self.session = None
@@ -31,13 +31,15 @@ class RealCUGAN(VideoTransformer):
         dim_h = self.tile_height + (2 * self.tile_pad)
         shape_str = f"{self.input_name}:1x3x{dim_h}x{dim_w}"
 
+        cache = os.path.join(self.cache_dir, "CUGAN", f"{dim_w}x{dim_h}")
+        os.makedirs(cache)
         providers = [
             ('TensorrtExecutionProvider', {
                 'device_id': 0,
                 'trt_max_workspace_size': 4294967296,
                 'trt_fp16_enable': True,
                 'trt_engine_cache_enable': True,
-                'trt_engine_cache_path': os.path.join(self.cache_dir, f"{dim_w}x{dim_h}"),
+                'trt_engine_cache_path': cache,
                 'trt_profile_min_shapes': shape_str,
                 'trt_profile_opt_shapes': shape_str,
                 'trt_profile_max_shapes': shape_str,
@@ -46,11 +48,31 @@ class RealCUGAN(VideoTransformer):
         ]
         print("⏳ Initializing RealCUGAN... (Compilation may take time if using TensorRT)")
         self.session = ort.InferenceSession(self.onnx_model_path, providers=providers)
-        print("✅ RealCUGAN ready!")
+
+        io_in_shape = (1, 3, dim_h, dim_w)
+        io_out_shape = (1, 3, dim_h * self.scale, dim_w * self.scale)
+
+        self.gpu_input = torch.empty(io_in_shape, dtype=torch.float32, device='cuda').contiguous()
+        self.gpu_output = torch.empty(io_out_shape, dtype=torch.float32, device='cuda').contiguous()
+
+        # Build structural zero-copy IO-Binding pipeline object map
+        self.io_binding = self.session.io_binding()
+
+        self.io_binding.bind_input(
+            name=self.input_name, device_type='cuda', device_id=0,
+            element_type=np.float32, shape=io_in_shape, buffer_ptr=self.gpu_input.data_ptr()
+        )
+        self.io_binding.bind_output(
+            name=self.output_name, device_type='cuda', device_id=0,
+            element_type=np.float32, shape=io_out_shape, buffer_ptr=self.gpu_output.data_ptr()
+        )
+
         self.input_name = self.session.get_inputs()[0].name
         self.output_name = self.session.get_outputs()[0].name
 
-    def transform(self, frame: np.ndarray) -> np.ndarray:
+        print("✅ RealCUGAN ready!")
+
+    def transform(self, frame: np.ndarray) -> list[np.ndarray]:
         if not self.session:
             self.init_engine()
 
@@ -61,28 +83,6 @@ class RealCUGAN(VideoTransformer):
 
         # 2. Create an empty blank canvas for the upscaled output on the GPU
         out_frame_t = torch.zeros((H * self.scale, W * self.scale, C), dtype=torch.uint8, device='cuda')
-
-        # --- PRE-ALLOCATE MEMORY AND BIND ONCE ---
-        dim_w = self.tile_width + (2 * self.tile_pad)
-        dim_h = self.tile_height + (2 * self.tile_pad)
-
-        trt_in_shape = (1, C, dim_h, dim_w)
-        trt_out_shape = (1, C, dim_h * self.scale, dim_w * self.scale)
-
-        gpu_input = torch.empty(trt_in_shape, dtype=torch.float32, device='cuda').contiguous()
-        gpu_output = torch.empty(trt_out_shape, dtype=torch.float32, device='cuda').contiguous()
-
-        io_binding = self.session.io_binding()
-
-        io_binding.bind_input(
-            name=self.input_name, device_type='cuda', device_id=0,
-            element_type=np.float32, shape=trt_in_shape, buffer_ptr=gpu_input.data_ptr()
-        )
-        io_binding.bind_output(
-            name=self.output_name, device_type='cuda', device_id=0,
-            element_type=np.float32, shape=trt_out_shape, buffer_ptr=gpu_output.data_ptr()
-        )
-        # -----------------------------------------
 
         # Loop through the grid using respective height and width
         for y in range(0, H, self.tile_height):
@@ -121,19 +121,17 @@ class RealCUGAN(VideoTransformer):
                 input_tensor = (padded_patch.unsqueeze(0).float() / 255.0)
 
                 # Copy current tile into the pre-bound GPU memory
-                gpu_input.copy_(input_tensor)
+                self.gpu_input.copy_(input_tensor, non_blocking=True)
 
-                # --- NEW: Synchronize PyTorch stream before ORT execution ---
                 torch.cuda.synchronize()
 
                 # Execute ONNX Runtime (Reads from VRAM, Writes to VRAM)
-                self.session.run_with_iobinding(io_binding)
+                self.session.run_with_iobinding(self.io_binding)
 
-                # --- NEW: Synchronize PyTorch stream before ORT execution ---
-                torch.cuda.synchronize()
+                # torch.cuda.synchronize()
 
                 # Reconstruct output mapping natively on GPU from the bound output tensor
-                out_patch = gpu_output.squeeze(0).permute(1, 2, 0)
+                out_patch = self.gpu_output.squeeze(0).permute(1, 2, 0)
                 out_patch = torch.clamp(out_patch * 255.0, 0, 255).byte()
 
                 # Crop out ONLY the valid region
@@ -149,7 +147,7 @@ class RealCUGAN(VideoTransformer):
                             x * self.scale : x_end * self.scale, :] = valid_patch
 
         # 3. Transfer the final stitched frame back to the CPU/NumPy just once
-        return out_frame_t.cpu().numpy()
+        return [out_frame_t.cpu().numpy()]
 
 
     def release_memory(self):

@@ -28,13 +28,15 @@ import time
 from modules.modular_pipeline import ModularProcessingPipeline
 from modules.nvidia.realCUGAN import RealCUGAN
 from modules.nvidia.realESRGAN import RealESRGAN
+from modules.nvidia.RIFE import RIFE
 
 async def run_test():
     pipeline = ModularProcessingPipeline()
 
     # 1. Instantiate the transformer class
-    tr = RealCUGAN(onnx_model_path="../models/cugan/pro-conservative-up2x.onnx", tile_width=960, tile_height=540, tile_pad=32)
-    # tr = RealESRGAN_TRT_CUDA(onnx_model_path="../models/RealESRGANv2/RealESRGANv2-animevideo-xsx2.onnx", tile_width=310, tile_height=180)
+    # tr = RealCUGAN(onnx_model_path="../models/cugan/pro-conservative-up2x.onnx", tile_width=960, tile_height=540, tile_pad=32)
+    # tr = RealESRGAN(onnx_model_path="../models/RealESRGANv2/RealESRGANv2-animevideo-xsx2.onnx")
+    tr = RIFE(onnx_model_path="../models/rife/rife_v4.10.onnx")
     pipeline.add_stage(tr)
 
     # Note: Replace 'sample.mov' with an actual short video path
@@ -42,34 +44,34 @@ async def run_test():
     print(f"Starting pipeline on {input_video}...")
     os.makedirs("testing", exist_ok=True)
 
-    try:
-        frame_count = 0
+    # try:
+    frame_count = 0
 
-        # 2. Consume the asynchronous pipeline generator
-        start = time.time_ns()
-        async for frame_bytes, w, h in pipeline.stream_pipeline(input_video):
-            frame_count += 1
-            print(f"✅ Processed frame {frame_count} | New resolution: {w}x{h}")
+    # 2. Consume the asynchronous pipeline generator
+    start = time.time_ns()
+    async for frame_bytes, w, h in pipeline.stream_pipeline(input_video):
+        frame_count += 1
+        print(f"✅ Processed frame {frame_count} | New resolution: {w}x{h}")
 
-            # 3. Convert bytes back to a numpy array (RGB format)
-            frame_array = np.frombuffer(frame_bytes, dtype=np.uint8).reshape((h, w, 3))
+        # 3. Convert bytes back to a numpy array (RGB format)
+        frame_array = np.frombuffer(frame_bytes, dtype=np.uint8).reshape((h, w, 3))
 
-            # 4. Use PyAV to save the RGB numpy array directly as an image
-            av_frame = av.VideoFrame.from_ndarray(frame_array, format='rgb24')
-            av_frame.to_image().save(f"testing/test_output_frame_{frame_count}.jpg")
+        # 4. Use PyAV to save the RGB numpy array directly as an image
+        av_frame = av.VideoFrame.from_ndarray(frame_array, format='rgb24')
+        av_frame.to_image().save(f"testing/test_output_frame_{frame_count}.jpg")
 
-            # Break after 1 frame so you don't process the whole video during a test
-            if frame_count >= 1000:
-                print("Test complete. Check the output image.")
-                break
-        end = time.time_ns()
-        print(f"Took {round(end - start, 4)}")
+        # Break after 1 frame so you don't process the whole video during a test
+        if frame_count >= 1000:
+            print("Test complete. Check the output image.")
+            break
+    end = time.time_ns()
+    print(f"Took {round(end - start, 4)}")
 
-    except Exception as e:
-        print(f"❌ Pipeline failed: {e}")
+    # except Exception as e:
+    #     print(f"❌ Pipeline failed: {e}")
 
-    finally:
-        await pipeline.clean_memory()
+    # finally:
+    #     await pipeline.clean_memory()
 
 if __name__ == "__main__":
     asyncio.run(run_test())
