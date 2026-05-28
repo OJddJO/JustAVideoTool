@@ -2,13 +2,13 @@ import flet as ft
 from views.generic import GenericContainer, TextField, NumberInput
 
 from modules.video_transformer import VideoTransformer
-from modules.nvidia.realCUGAN import RealCUGAN
-from modules.nvidia.realESRGAN import RealESRGAN
+from modules.nvidia import *
 
 __all__ = [
     "TransformerLayer",
     "RealESRGAN_Layer",
     "RealCUGAN_Layer",
+    "RIFE_Layer"
 ]
 
 @ft.control
@@ -21,6 +21,7 @@ class TransformerLayer(GenericContainer):
         self.container = container
         self.file_picker = ft.FilePicker()
         self.onnx_model_path = TextField(label="ONNX path", expand=True, value=default_onnx)
+        self.cache_dir = TextField(label="Cache path", expand=True, value="cache")
         self.content = ft.Row(
             [
                 ft.ReorderableDragHandle(
@@ -45,14 +46,20 @@ class TransformerLayer(GenericContainer):
                         ft.ExpansionTile(
                             title="Advanced Settings",
                             leading=ft.Icon(ft.Icons.SETTINGS_OUTLINED, size=18),
-                            controls=ft.Column(advanced_settings),
+                            controls=ft.Column([
+                                ft.Row([
+                                    ft.Text("Cache directory", size=16, weight=ft.FontWeight.BOLD),
+                                    self.cache_dir,
+                                    ft.Button("Choose directory", icon=ft.Icons.FOLDER_OPEN_OUTLINED, on_click=self.choose_cache_dir)
+                                ],expand=True)
+                            ] + advanced_settings),
                             dense=True,
                             expanded=False,
                             shape=ft.RoundedRectangleBorder(radius=0),
                             collapsed_shape=ft.RoundedRectangleBorder(radius=0),
                             controls_padding=ft.Padding(top=10),
                         )
-                    ] if advanced_settings else []),
+                    ]),
                     expand=True,
                     margin=5
                 )
@@ -71,6 +78,11 @@ class TransformerLayer(GenericContainer):
         if file:
             self.onnx_model_path.value = file[0].path
 
+    async def choose_cache_dir(self, e: ft.Event[ft.Button]):
+        dir = await self.file_picker.get_directory_path("Choose the cache directory")
+        if dir:
+            self.cache_dir.value = dir
+
     async def build_transformer(self) -> VideoTransformer:
         raise NotImplementedError("Transformer Layer shouldn't be directly used")
 
@@ -85,7 +97,7 @@ ESRGAN (Enhanced Super-Resolution GAN): Optimized for real-world photos and real
         self.tile_height = NumberInput(value="360", label="Tile height", expand=True)
         self.tile_pad = NumberInput(value="32", label="Tile padding", expand=True)
         self.scale_factor = NumberInput(value="2", label="Scale factor", expand=True)
-        self.cache_dir = TextField(label="Cache path", expand=True, value="cache/RealESRGAN")
+        self.cache_dir = TextField(label="Cache path", expand=True, value="cache")
         super().__init__(
             container=container,
             title=[ft.Icon(ft.Icons.IMAGE_ASPECT_RATIO), ft.Text("RealESRGAN", size=20, weight=ft.FontWeight.BOLD, expand=True)],
@@ -110,19 +122,7 @@ ESRGAN (Enhanced Super-Resolution GAN): Optimized for real-world photos and real
                     self.scale_factor
                 ], expand=True),
             ],
-            advanced_settings=[
-                ft.Row([
-                    ft.Text("Cache directory", size=16, weight=ft.FontWeight.BOLD),
-                    self.cache_dir,
-                    ft.Button("Choose directory", icon=ft.Icons.FOLDER_OPEN_OUTLINED, on_click=self.choose_cache_dir)
-                ],expand=True)
-            ]
         )
-
-    async def choose_cache_dir(self, e: ft.Event[ft.Button]):
-        dir = await self.file_picker.get_directory_path("Choose the cache directory")
-        if dir:
-            self.cache_dir.value = dir
 
     async def build_transformer(self):
         return RealESRGAN(
@@ -145,7 +145,6 @@ CUGAN (Cascaded-U-Net GAN): Specifically optimized for Anime, Manga, and Cartoon
         self.tile_height = NumberInput(value="360", label="Tile height")
         self.tile_pad = NumberInput(value="32", label="Tile padding")
         self.scale_factor = NumberInput(value="2", label="Scale factor", expand=True)
-        self.cache_dir = TextField(label="Cache path", expand=True, value="cache/RealCUGAN")
         super().__init__(
             container,
             title = [ft.Icon(ft.Icons.IMAGE_ASPECT_RATIO), ft.Text("RealESRGAN", size=20, weight=ft.FontWeight.BOLD, expand=True)],
@@ -179,11 +178,6 @@ CUGAN (Cascaded-U-Net GAN): Specifically optimized for Anime, Manga, and Cartoon
             ]
         )
 
-    async def choose_cache_dir(self, e: ft.Event[ft.Button]):
-        dir = await self.file_picker.get_directory_path("Choose the cache directory")
-        if dir:
-            self.cache_dir.value = dir
-
     async def build_transformer(self):
         return RealCUGAN(
             onnx_model_path=self.onnx_model_path.value,
@@ -193,3 +187,19 @@ CUGAN (Cascaded-U-Net GAN): Specifically optimized for Anime, Manga, and Cartoon
             tile_pad=int(self.tile_pad.value),
             scale=int(self.scale_factor.value)
         )
+
+@ft.control
+class RIFE_Layer(TransformerLayer):
+    desc = """A transformer for frame interpolation using RIFE AI.
+RIFE (Real-Time Intermediate Flow Estimation) is a deep learning model designed to generate intermediate frames between existing video frames.
+It excels at creating smooth slow-motion effects and increasing frame rates by predicting motion and synthesizing new frames, all while maintaining high visual quality and real-time performance."""
+
+    def __init__(self, container: list[TransformerLayer]):
+        super().__init__(
+            container,
+            title=[ft.Icon(ft.Icons.SLOW_MOTION_VIDEO_OUTLINED), ft.Text("RIFE", size=20, weight=ft.FontWeight.BOLD, expand=True)],
+            default_onnx="models/rife/rife_v4.10.onnx"
+        )
+
+    async def build_transformer(self):
+        return RIFE(onnx_model_path=self.onnx_model_path.value, cache_dir=self.cache_dir.value)

@@ -8,7 +8,7 @@ import gc
 from modules.video_transformer import VideoTransformer
 
 class RealESRGAN(VideoTransformer):
-    def __init__(self, onnx_model_path="models/RealESRGANv2/RealESRGANv2-animevideo-xsx2.onnx", cache_dir="trt_cache", tile_width=620, tile_height=360, tile_pad=32, scale=2):
+    def __init__(self, onnx_model_path="models/RealESRGANv2/RealESRGANv2-animevideo-xsx2.onnx", cache_dir="cache", tile_width=620, tile_height=360, tile_pad=32, scale=2):
         self.onnx_model_path = onnx_model_path
         self.cache_dir = cache_dir
         self.session = None
@@ -75,6 +75,9 @@ class RealESRGAN(VideoTransformer):
         self.output_name = self.session.get_outputs()[0].name
 
         print("✅ RealESRGAN ready!")
+
+    def get_info(self):
+        return (self.scale, self.scale, 1)
 
     def transform(self, frame: np.ndarray) -> list[np.ndarray]:
         if not self.session:

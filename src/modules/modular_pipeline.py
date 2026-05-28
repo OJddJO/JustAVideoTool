@@ -8,10 +8,19 @@ class ModularProcessingPipeline:
     def __init__(self, batch_size: int = 32):
         self.transformers: list[VideoTransformer] = []
         self.batch_size = batch_size
+        print(f"ℹ️ Batch size for frame processing: {self.batch_size}")
+        self.width_factor = 1
+        self.height_factor = 1
+        self.framegen_factor = 1
 
     def add_stage(self, transformer: VideoTransformer):
         """Appends a new transformer block stage to the processing assembly line."""
         self.transformers.append(transformer)
+        print(f"➕ Added {transformer.__class__.__name__}")
+        wf, hf, fgf = transformer.get_info()
+        self.width_factor *= wf
+        self.height_factor *= hf
+        self.framegen_factor *= fgf
         return self
 
     async def clean_memory(self):

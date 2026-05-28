@@ -87,7 +87,7 @@ def create_meshgrid(h, w, device='cuda'):
     return grid_x.unsqueeze(0).unsqueeze(0), grid_y.unsqueeze(0).unsqueeze(0)
 
 class RIFE(VideoTransformer):
-    def __init__(self, onnx_model_path="models/rife/rife_v4.10.onnx", cache_dir="trt_cache"):
+    def __init__(self, onnx_model_path="models/rife/rife_v4.10.onnx", cache_dir="cache"):
         super().__init__()
         self.onnx_model_path = onnx_model_path
         self.cache_dir = cache_dir
@@ -98,7 +98,6 @@ class RIFE(VideoTransformer):
         self.io_binding = None
         self.previous_frame = None
         self.previous_context = None
-        # self.timestep = None
 
     def init_engine(self, width: int, height: int):
         if not os.path.exists(self.onnx_model_path):
@@ -151,6 +150,9 @@ class RIFE(VideoTransformer):
         self.context = torch.zeros((1, 2, height, width), dtype=torch.float32, device='cuda')
 
         print("✅ RIFE ready!")
+
+    def get_info(self):
+        return (1, 1, 2)
 
     def transform(self, current_frame: np.ndarray) -> list[np.ndarray]:
         h, w, _ = current_frame.shape

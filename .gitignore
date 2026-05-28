@@ -166,3 +166,4 @@ testing/
 trt_cache/
 models/
 sample.*
+cache/

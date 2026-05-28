@@ -18,7 +18,7 @@ class GenericView(GenericContainer):
         self.bgcolor = ft.Colors.SURFACE
         self.padding = 20
         self.margin = 0
-        self.overlay = []
+        self.overlay: list[ft.Control] = []
 
 @ft.control
 class GenericOverlay(ft.Stack):

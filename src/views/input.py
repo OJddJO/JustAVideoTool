@@ -31,6 +31,8 @@ def get_icon_from_stream_type(type: str):
 class StreamMetadata(ft.Column):
     def __init__(self, metadata: dict, content: list = []):
         super().__init__()
+        self.metadata = metadata
+        self.include = ft.Checkbox(label=Label("Include in output"), value=True)
         self.controls = [
             ft.Row([
                 Label("Codec:"),
@@ -40,9 +42,17 @@ class StreamMetadata(ft.Column):
                 Label("Type:"),
                 ft.Text(metadata.get("codec_type", "unknown")),
             ])
-        ] + content
+        ] + content + [
+            ft.Row([
+                self.include
+            ], alignment=ft.MainAxisAlignment.END)
+        ]
         self.expand = True
         self.margin = 10
+
+    def build_metadata(self):
+        self.metadata["include"] = self.include.value
+        return self.metadata
 
 
 @ft.control
@@ -69,6 +79,7 @@ class VideoStreamMetadata(StreamMetadata):
                 ])
             ]
         )
+        self.include.disabled = True
 
 @ft.control
 class AudioStreamMetadata(StreamMetadata):
@@ -130,8 +141,9 @@ def build_metadata_view(type: str, metadata: dict):
 
 
 @ft.control
-class FileMetadata(ft.Tabs):
+class FileStreams(ft.Tabs):
     def __init__(self, metadata: dict):
+        self.streams = [ build_metadata_view(s.get("codec_type", ""), s) for s in metadata["streams"] ]
         super().__init__(
             length = len(metadata["streams"]),
             content = ft.Column(
@@ -145,23 +157,27 @@ class FileMetadata(ft.Tabs):
                         ]
                     ),
                     ft.TabBarView(
-                        controls=[ build_metadata_view(s.get("codec_type", ""), s) for s in metadata["streams"] ],
-                        height=200,
+                        controls=self.streams,
+                        height=280,
                     )
                 ]
             ),
             margin=ft.Margin(top=10)
         )
 
+    def build_metadata(self):
+        return [stream.build_metadata() for stream in self.streams]
+
 
 @ft.control
-class FilePathField(GenericContainer):
-    def __init__(self, container: list["FilePathField"], file: ft.FilePickerFile, metadata: dict):
+class FileField(GenericContainer):
+    def __init__(self, container: list["FileField"], file: ft.FilePickerFile, metadata: dict):
         super().__init__()
         self.filepath = file.path
         self.filename = file.name
         self.filesize = file.size
         self.metadata = metadata
+        self.streams = FileStreams(metadata)
 
         self.container = container
 
@@ -184,7 +200,7 @@ class FilePathField(GenericContainer):
                     ft.Button("Remove from selection", icon=ft.Icons.REMOVE, expand=True, icon_color=ft.Colors.RED_300,
                                 color=ft.Colors.RED_300, on_click=self.remove_from_container)
                 ]),
-                FileMetadata(metadata)
+                self.streams
             ],
             controls_padding=ft.Padding(top=10),
         )
@@ -197,10 +213,15 @@ class FilePathField(GenericContainer):
 
     async def remove_from_container(self):
         self.container.remove(self)
-        print(f"[INFO] Removed {self.filename} ({self.filepath}) from selection")
+        print(f"ℹ️ Removed {self.filename} ({self.filepath}) from selection")
 
-    def get_file_attr(self) -> tuple:
-        return (self.filename, self.filepath, self.filesize)
+    def get_file_attr(self) -> dict:
+        return {
+            "name": self.filename,
+            "path": self.filepath,
+            "size": self.filesize,
+            "streams": self.streams.build_metadata()
+        }
 
 
 @ft.control
@@ -209,8 +230,8 @@ class InputView(GenericView):
         super().__init__(*args, **kwargs)
 
         self.file_picker = ft.FilePicker()
-        self.picked_file_paths: list[FilePathField] = []
-        self.file_container = ft.ListView(self.picked_file_paths, clip_behavior=ft.ClipBehavior.HARD_EDGE, expand=True)
+        self.picked_file: list[FileField] = []
+        self.file_container = ft.ListView(self.picked_file, clip_behavior=ft.ClipBehavior.HARD_EDGE, expand=True)
 
         clear_selection_dialog = ft.AlertDialog(
             modal=True,
@@ -243,9 +264,9 @@ class InputView(GenericView):
         )
 
     async def handle_clear_selection(self, e: ft.Event[ft.Button]):
-        self.picked_file_paths.clear()
+        self.picked_file.clear()
         self.file_container.update()
-        print("[INFO] Cleared input selection")
+        print("ℹ️ Cleared input selection")
         self.page.pop_dialog()
 
     async def handle_file_selection(self, e: ft.Event[ft.Button]):
@@ -259,7 +280,7 @@ class InputView(GenericView):
             dialog_title="Select the videos you want to edit",
             allowed_extensions=["mp4", "mkv", "mov"] , allow_multiple=True)
 
-        existing_paths = [field.get_file_attr() for field in self.picked_file_paths]
+        existing_paths = [field.get_file_attr() for field in self.picked_file]
 
         for i, file in enumerate(files):
             self.loading_ring.value = i / len(files)
@@ -286,11 +307,11 @@ class InputView(GenericView):
 
             stdout, _ = await process.communicate()
             if process.returncode != 0:
-                print(f"[ERROR] Failed to parse metadata for {file.name} ({file.path})")
+                print(f"❌ Failed to parse metadata for {file.name} ({file.path})")
 
             metadata = json.loads(stdout.decode('utf-8'))
-            self.picked_file_paths.append(FilePathField(self.picked_file_paths, file, metadata))
-            print(f"[INFO] Added {file.name} ({file.path}) to selection")
+            self.picked_file.append(FileField(self.picked_file, file, metadata))
+            print(f"ℹ️ Added {file.name} ({file.path}) to selection")
             self.file_container.update()
 
         self.loading_ring.visible = False
@@ -298,3 +319,6 @@ class InputView(GenericView):
         self.file_container.update()
         e.control.disabled = False
         e.control.update()
+
+    def build_files_data(self):
+        return [file.get_file_attr() for file in self.picked_file]

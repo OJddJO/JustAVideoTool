@@ -3,11 +3,12 @@ import json
 from views.generic import GenericView, GenericContainer, ViewTitle, TextField, Label
 
 @ft.control
-class EncodingView(GenericView):
+class EncodeView(GenericView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.file_picker = ft.FilePicker()
 
+        self.output_dir = TextField(value="output", label="Output directory", expand=True)
         self.output_extension = TextField(value="mkv", label="Container extension", expand=True, margin=ft.Margin(top=5))
 
         self.video_codec = TextField(value="libsvtav1", label="Video codec", expand=True)
@@ -46,6 +47,7 @@ class EncodingView(GenericView):
                         GenericContainer(
                             content=ft.Column([
                                 ft.Text("General", size=20, weight=ft.FontWeight.BOLD),
+                                ft.Row([ Label("Output directory"), self.output_dir, ft.Button("Select directory", icon=ft.Icons.FOLDER_OPEN_OUTLINED, on_click=self.choose_output_dir)]),
                                 ft.Row([ Label("Outputs extension"), self.output_extension ])
                             ], expand=True),
                         ),
@@ -99,8 +101,14 @@ class EncodingView(GenericView):
             self.__video_bitrate_settings.visible = True
             self.__video_crf_settings.visible = False
 
+    async def choose_output_dir(self, e: ft.Event[ft.Button]):
+        directory = await self.file_picker.get_directory_path("Choose the output directory")
+        if directory is not None:
+            self.output_dir.value = directory
+
     def get_params(self):
         return {
+            "out_dir": self.output_dir.value,
             "ext": self.output_extension.value,
             "audio": {
                 "codec": self.audio_codec.value,

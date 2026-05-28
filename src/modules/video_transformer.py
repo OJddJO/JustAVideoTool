@@ -3,6 +3,17 @@ import numpy as np
 
 class VideoTransformer(ABC):
     @abstractmethod
+    def get_info(self) -> tuple[int, int, int]:
+        """
+        Returns the information of the transformations done by the transformer.
+        The tuple should be (width_factor, height_factor, framegen_factor) where
+        width_factor is the width scaling factor
+        height_factor is the height scaling factor
+        framegen_factor is the factor of frame interpolation (frame generation)
+        """
+        pass
+
+    @abstractmethod
     def transform(self, frame: np.ndarray) -> list[np.ndarray]:
         """
         Accepts an interleaved RGB image array of shape (H, W, 3) with range [0, 255].

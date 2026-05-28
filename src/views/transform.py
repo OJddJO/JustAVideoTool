@@ -24,6 +24,13 @@ transformers: TransformersDictType = {
             "RealESRGAN": RealESRGAN_Layer,
             "RealCUGAN": RealCUGAN_Layer,
         }
+    },
+    "Frame interpolators": {
+        "desc": "Generates intermediate frames to increase video frame rate and create smoother motion.",
+        "icon": ft.Icons.SLOW_MOTION_VIDEO_OUTLINED,
+        "tr": {
+            "RIFE": RIFE_Layer,
+        }
     }
 }
 
@@ -60,7 +67,6 @@ class TransformerCategory(GenericContainer):
             controls=ft.ListView(
                 controls=[ TransformerSelector(adder, type, name) for name in transformers[type]["tr"] ],
                 expand=True,
-                spacing=10,
                 padding=10,
                 clip_behavior=ft.ClipBehavior.HARD_EDGE
             ),
@@ -76,7 +82,6 @@ class SelectorView(GenericView):
                 ft.ListView(
                     controls=[ TransformerCategory(self.add_transformer, type) for type in transformers ],
                     expand=True,
-                    spacing=20,
                     padding=10,
                     clip_behavior=ft.ClipBehavior.HARD_EDGE
                 ),
@@ -132,9 +137,8 @@ class TransformView(GenericView):
 
         self.transformers: list[TransformerLayer] = []
         self.selector_view = SelectorView(self.transformers)
-        self.selector_view_wrapper = GenericOverlay(self.selector_view)
+        self.overlay = [GenericOverlay(self.selector_view)]
         self.pipeline_params = PipelineParams()
-        self.overlay = [self.selector_view_wrapper]
         self.content = ft.Column(
             [
                 ft.Text("Transform", size=28, weight=ft.FontWeight.BOLD),
@@ -158,7 +162,7 @@ class TransformView(GenericView):
         )
 
     async def handle_add_transformer(self, e: ft.Event[ft.Button]):
-        self.selector_view_wrapper.visible = True
+        self.selector_view.wrapper.visible = True
 
     async def handle_clear_transformers(self, e: ft.Event[ft.Button]):
         self.transformers.clear()
