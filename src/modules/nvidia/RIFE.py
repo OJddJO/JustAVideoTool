@@ -175,7 +175,7 @@ class RIFE(VideoTransformer):
         ssim_cur_frame = F.interpolate(cur_frame_t, (32, 32), mode="bilinear", align_corners=False)
         ssim = ssim_matlab(ssim_prev_frame[:, :3], ssim_cur_frame[:, :3])
 
-        if ssim < 0.2 or ssim > 0.996:
+        if ssim < 0.05 or ssim > 0.996:
             self.previous_frame = cur_frame_t
             return [current_frame.copy(), current_frame]
 
