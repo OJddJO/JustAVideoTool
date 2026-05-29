@@ -30,7 +30,7 @@ from modules.nvidia.realCUGAN import RealCUGAN
 from modules.nvidia.realESRGAN import RealESRGAN
 from modules.nvidia.RIFE import RIFE
 
-async def run_test():
+def run_test():
     pipeline = ModularProcessingPipeline()
 
     # 1. Instantiate the transformer class
@@ -49,7 +49,7 @@ async def run_test():
 
     # 2. Consume the asynchronous pipeline generator
     start = time.time_ns()
-    async for frame_bytes, w, h in pipeline.stream_pipeline(input_video):
+    for frame_bytes, w, h in pipeline.stream_pipeline(input_video):
         frame_count += 1
         print(f"✅ Processed frame {frame_count} | New resolution: {w}x{h}")
 
@@ -74,5 +74,5 @@ async def run_test():
     #     await pipeline.clean_memory()
 
 if __name__ == "__main__":
-    asyncio.run(run_test())
+    run_test()
     input("Press ENTER to continue")

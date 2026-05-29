@@ -23,11 +23,11 @@ class ModularProcessingPipeline:
         self.framegen_factor *= fgf
         return self
 
-    async def clean_memory(self):
+    def clean_memory(self):
         for transformer in self.transformers:
             transformer.release_memory()
 
-    async def stream_pipeline(self, input_path):
+    def stream_pipeline(self, input_path):
         try:
             container = av.open(input_path)
             video_stream = container.streams.video[0]
@@ -48,7 +48,7 @@ class ModularProcessingPipeline:
                     for stage in self.transformers:
                         for frame in batch:
                             # Offload compute bounds safely over to concurrent thread pools
-                            next_stage_batch.extend(await asyncio.to_thread(stage.transform, frame))
+                            next_stage_batch.extend(stage.transform(frame))
                         batch = next_stage_batch
 
                     # Unpack the batch and yield frames sequentially
@@ -63,7 +63,7 @@ class ModularProcessingPipeline:
                 next_stage_batch = []
                 for stage in self.transformers:
                     for frame in batch:
-                        next_stage_batch.extend(await asyncio.to_thread(stage.transform, frame))
+                        next_stage_batch.extend(stage.transform(frame))
                     batch = next_stage_batch
 
                 for processed_frame in batch:

@@ -1,6 +1,7 @@
 import flet as ft
 import os
 import asyncio
+import subprocess
 import shlex
 import time
 from views.generic import GenericView, GenericContainer, ViewTitle, TextField
@@ -24,21 +25,24 @@ class ConsoleView(GenericView):
 
         self.progress_status = ft.Text("Waiting run...")
         self.progress_bar = ft.ProgressBar()
+        self.frame_progress = ft.ProgressBar(value=0)
+        progress = GenericContainer(
+            content=ft.Column([
+                self.progress_status,
+                self.progress_bar,
+                self.frame_progress
+            ])
+        )
+        progress.expand = False
         self.content = ft.Column([
             ViewTitle("Console"),
             GenericContainer(
                 content=self.text_field,
                 expand=True,
             ),
-            GenericContainer(
-                content=ft.Column([
-                    self.progress_status,
-                    self.progress_bar
-                ])
-            )
-        ], expand=True)
-
-        self.ffmpeg_process = None
+            progress
+        ], expand=True, spacing=0)
+        self.is_cancelled = False
 
     def did_mount(self):
         self.log_running = True
@@ -69,23 +73,100 @@ class ConsoleView(GenericView):
                 else:
                     await asyncio.sleep(0.1)
 
-    async def run_pipeline(files: list[str], pipeline: ModularProcessingPipeline, ffmpeg_cmds: list[str]):
+    def run_pipeline(self, files: list, pipeline: ModularProcessingPipeline, ffmpeg_cmds: list[str], nb_frames: int):
+        self.is_cancelled = False
+        error = 0
+        nb_of_files = len(files)
+
+        self.progress_bar.value = 0
+        self.progress_bar.update()
+
         for i, file in enumerate(files):
+            if self.is_cancelled:
+                self.progress_status.value = "Pipeline cancelled by user"
+                self.progress_status.update()
+                error = 0
+                break
+
+            self.progress_status.value = f"Processing {i+1}/{nb_of_files} files"
+            self.progress_status.update()
             cmd = ffmpeg_cmds[i]
-            ffmpeg_process = await asyncio.create_subprocess_exec(
-                *shlex.split(cmd), stdin=asyncio.subprocess.PIPE
-            )
+            ffmpeg_process = None
 
-            print(f"▶️ Running the pipeline on {file}")
-            start = time.thread_time_ns()
-            async for frame_bytes, w ,h in pipeline.stream_pipeline(file):
-                ffmpeg_process.stdin.write(frame_bytes)
-                await ffmpeg_process.stdin.drain()
+            print(f"▶️ Running the pipeline on {file['name']} ({file['path']})")
+            start = time.time_ns()
+            frame = 1
+            self.frame_progress.value = 0
+            self.frame_progress.update()
+            try:
+                for frame_bytes, w ,h in pipeline.stream_pipeline(file["path"]):
+                    if self.is_cancelled:
+                        print("🛑 Cancellation detected! Terminating FFmpeg...")
+                        if ffmpeg_process: ffmpeg_process.terminate()  # Instantly kills the FFmpeg process safely
+                        break
 
-            print("🔄️ Closing FFmpeg pipe and finalizing video container...")
-            ffmpeg_process.stdin.close()
-            await ffmpeg_process.stdin.wait_closed()
-            await ffmpeg_process.wait()
-            print(f"🎉 Video {file} process complete!")
-            end = time.time_ns()
+                    if not ffmpeg_process:
+                        ffmpeg_process = subprocess.Popen(
+                            shlex.split(cmd), stdin=subprocess.PIPE, stderr=subprocess.PIPE
+                        )
+
+                    ffmpeg_process.stdin.write(frame_bytes)
+                    ffmpeg_process.stdin.flush()
+
+                    if frame%100 == 0 or frame == nb_frames:
+                        self.frame_progress.value = frame/nb_frames
+                        self.frame_progress.update()
+                    frame += 1
+
+                if ffmpeg_process and not self.is_cancelled:
+                    print("🔄️ Closing FFmpeg pipe and finalizing video container...")
+                    ffmpeg_process.stdin.close()
+                    while not ffmpeg_process.stdin.closed:
+                        time.sleep(0.1)
+
+            except Exception as pipe_err:
+                print(f"❌ Pipeline error on {file['name']}: {pipe_err}")
+                if ffmpeg_process and ffmpeg_process.stdin and not ffmpeg_process.stdin.closed:
+                    ffmpeg_process.stdin.close()
+
+            finally:
+                if ffmpeg_process:
+                    return_code = ffmpeg_process.wait()
+                    if self.is_cancelled:
+                        print(f"💀 Process for {file['name']} was forcefully aborted.")
+                        self.progress_status.value = "Pipeline cancelled by user"
+                        self.progress_status.update()
+                        error = 1
+                        break
+
+                    end = time.time_ns()
+
+                    if return_code != 0:
+                        stderr_bytes = ffmpeg_process.stderr.read()
+                        ffmpeg_errors = stderr_bytes.decode().strip()
+                        print(f"❌ FFmpeg failed with exitcode {return_code} on {file['name']}")
+                        print(f"ℹ️ FFmpeg Error Log:\n{ffmpeg_errors}")
+
+                        self.progress_status.value = f"Failed on {file['name']}!"
+                        self.progress_status.update()
+                        error = 1
+                        break
+                else:
+                    # If FFmpeg never even spawned
+                    error = 1
+                    break
+
+            print(f"✅ Video {file['name']} process complete!")
             print(f"ℹ️ Took {round((end - start) / 1e9, 4)} seconds.")
+
+            self.progress_bar.value = (i+1)/nb_of_files
+            self.progress_bar.update()
+
+        if not error:
+            self.progress_status.value = "Done !"
+            self.progress_status.update()
+
+        pipeline.clean_memory()
+
+    def cancel_pipeline(self):
+        self.is_cancelled = True

@@ -74,18 +74,6 @@ def ssim_matlab(img1, img2, window_size=11, window=None, size_average=True, full
         return ret, cs
     return ret
 
-def create_meshgrid(h, w, device='cuda'):
-    # Generate normalized coordinates [-1, 1]
-    # Note: RIFE typically expects grid values to range from -1 to 1
-    # but sometimes standard pixel coordinates or specific offsets are expected.
-    # Let's ensure the grid generation uses standard PyTorch grid formats:
-    grid_y, grid_x = torch.meshgrid(
-        torch.linspace(-1, 1, h, device=device),
-        torch.linspace(-1, 1, w, device=device),
-        indexing='ij'
-    )
-    return grid_x.unsqueeze(0).unsqueeze(0), grid_y.unsqueeze(0).unsqueeze(0)
-
 class RIFE(VideoTransformer):
     def __init__(self, onnx_model_path="models/rife/rife_v4.10.onnx", cache_dir="cache"):
         super().__init__()
@@ -97,7 +85,6 @@ class RIFE(VideoTransformer):
         self.gpu_output = None
         self.io_binding = None
         self.previous_frame = None
-        self.previous_context = None
 
     def init_engine(self, width: int, height: int):
         if not os.path.exists(self.onnx_model_path):
@@ -108,7 +95,7 @@ class RIFE(VideoTransformer):
         self.output_name = temp_session.get_outputs()[0].name
 
         shape_str = f"{self.input_name}:1x11x{height}x{width}"
-        cache = os.path.join(self.cache_dir, "RIFE", f"{width}x{height}")
+        cache = os.path.join(self.cache_dir, "RIFE", os.path.basename(self.onnx_model_path), f"{width}x{height}")
         os.makedirs(cache, exist_ok=True)
         providers = [
             ('TensorrtExecutionProvider', {
@@ -145,9 +132,23 @@ class RIFE(VideoTransformer):
         self.input_name = self.session.get_inputs()[0].name
         self.output_name = self.session.get_outputs()[0].name
 
-        self.grid_x, self.grid_y = create_meshgrid(height, width)
         self.timestep = torch.full((1, 1, height, width), 0.5, dtype=torch.float32, device='cuda')
-        self.context = torch.zeros((1, 2, height, width), dtype=torch.float32, device='cuda')
+
+        x_indices = np.arange(width, dtype=np.float32)
+        y_indices = np.arange(height, dtype=np.float32)
+        gx, gy = np.meshgrid(x_indices, y_indices)
+
+        gx = 2.0 * gx / (width - 1) - 1.0
+        gy = 2.0 * gy / (height - 1) - 1.0
+
+        self.grid_x = torch.from_numpy(gx).cuda().unsqueeze(0).unsqueeze(0)
+        self.grid_y = torch.from_numpy(gy).cuda().unsqueeze(0).unsqueeze(0)
+
+        mx = np.full((height, width), 2.0 / (width - 1), dtype=np.float32)
+        my = np.full((height, width), 2.0 / (height - 1), dtype=np.float32)
+
+        self.mult_x = torch.from_numpy(mx).cuda().unsqueeze(0).unsqueeze(0)
+        self.mult_y = torch.from_numpy(my).cuda().unsqueeze(0).unsqueeze(0)
 
         print("✅ RIFE ready!")
 
@@ -174,13 +175,13 @@ class RIFE(VideoTransformer):
         ssim_cur_frame = F.interpolate(cur_frame_t, (32, 32), mode="bilinear", align_corners=False)
         ssim = ssim_matlab(ssim_prev_frame[:, :3], ssim_cur_frame[:, :3])
 
-        if ssim < 0.2:
+        if ssim < 0.2 or ssim > 0.996:
             self.previous_frame = cur_frame_t
             return [current_frame.copy(), current_frame]
 
         prev_frame_t_pad = F.pad(self.previous_frame, padding, mode="replicate")
         cur_frame_t_pad = F.pad(cur_frame_t, padding, mode="replicate")
-        bundled = torch.cat((prev_frame_t_pad, cur_frame_t_pad, self.timestep, self.grid_x, self.grid_y, self.context), 1).contiguous()
+        bundled = torch.cat((prev_frame_t_pad, cur_frame_t_pad, self.timestep, self.grid_x, self.grid_y, self.mult_x, self.mult_y), 1).contiguous()
 
         self.gpu_input.copy_(bundled, non_blocking=True)
 
@@ -199,6 +200,15 @@ class RIFE(VideoTransformer):
         if self.session is not None:
             del self.session
             self.session = None
+        self.previous_frame = None
+        self.gpu_input = None
+        self.gpu_out = None
+        self.io_binding = None
+        self.timestep_mask = None
+        self.grid_x = None
+        self.grid_y = None
+        self.mult_x = None
+        self.mult_y = None
         gc.collect()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()

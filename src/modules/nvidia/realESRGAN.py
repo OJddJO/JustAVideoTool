@@ -35,7 +35,7 @@ class RealESRGAN(VideoTransformer):
         dim_h = self.tile_height + (2 * self.tile_pad)
         shape_str = f"{self.input_name}:1x3x{dim_h}x{dim_w}"
 
-        cache = os.path.join(self.cache_dir, "ESRGAN", f"{dim_w}x{dim_h}")
+        cache = os.path.join(self.cache_dir, "ESRGAN", os.path.basename(self.onnx_model_path), f"{dim_w}x{dim_h}")
         os.makedirs(cache, exist_ok=True)
         providers = [
             ('TensorrtExecutionProvider', {

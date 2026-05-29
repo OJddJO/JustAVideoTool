@@ -3,6 +3,8 @@ import modules.setup
 import flet as ft
 import os
 from fractions import Fraction
+import asyncio
+import threading
 
 from views.generic import GenericView
 from views.input import InputView
@@ -36,8 +38,9 @@ class VideoTool:
         self.input = InputView()
         self.transform = TransformView()
         self.encode = EncodeView()
+        self.console = ConsoleView()
 
-        self.views_list = [self.input, self.transform, self.encode, ConsoleView()]
+        self.views_list = [self.input, self.transform, self.encode, self.console]
         for view in self.views_list:
             self.page.overlay.extend(view.overlay)
 
@@ -85,20 +88,25 @@ class VideoTool:
         self.view_container.content = self.views_list[e.control.selected_index]
 
     async def run(self, e: ft.Event[ft.Button]):
-        print("\nℹ️ Setting up pipeline...")
-        self.run_button.disabled = True
-        self.run_button.update()
-
         # ---- Setup the data ----
         pipeline = await self.transform.build_pipeline()
         files = self.input.build_files_data()
         enc = self.encode.get_params()
 
+        if len(files) == 0:
+            print("⚠️ No file selected")
+            return
+
+        print("\nℹ️ Setting up pipeline...")
+
+        self.run_button.disabled = True
+        self.run_button.update()
+
         os.makedirs(enc["out_dir"], exist_ok=True)
         ffmpeg_cmds = []
         for file in files:
-            video_stream = None
             if pipeline:
+                video_stream = None
                 for s in file["streams"]:
                     if s.get("type", "") == "video":
                         video_stream = s
@@ -136,6 +144,7 @@ class VideoTool:
 
                 cmd += f'-hide_banner -v error "{os.path.join(enc["out_dir"], file["name"])}"'
                 ffmpeg_cmds.append(cmd)
+        print("✅ Pipeline setup done !")
         # ------------------------
 
         self.run_button.visible = False
@@ -144,9 +153,30 @@ class VideoTool:
         self.run_button.disabled = False
         self.stop_button.update()
 
+        def thread_target():
+            try:
+                self.console.run_pipeline(
+                    files, pipeline, ffmpeg_cmds, video_stream["nb_frames"] * pipeline.framegen_factor
+                )
+            finally:
+                e.page.run_task(self.handle_natural_completion)
+
+        self.pipeline_thread = threading.Thread(target=thread_target, daemon=True)
+        self.pipeline_thread.start()
+
+    async def handle_natural_completion(self):
+        self.stop_button.visible = False
+        self.stop_button.update()
+        self.run_button.visible = True
+        self.run_button.update()
+
     async def stop(self, e: ft.Event[ft.Button]):
         self.stop_button.disabled = True
         self.stop_button.update()
+
+        self.console.cancel_pipeline()
+        while self.pipeline_thread.is_alive():
+            await asyncio.sleep(0.1)
 
         self.stop_button.visible = False
         self.run_button.visible = True

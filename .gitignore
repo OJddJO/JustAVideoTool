@@ -167,3 +167,5 @@ trt_cache/
 models/
 sample.*
 cache/
+output/
+*.javt_param
