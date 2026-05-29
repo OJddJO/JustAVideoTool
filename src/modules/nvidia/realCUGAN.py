@@ -168,3 +168,6 @@ class RealCUGAN(VideoTransformer):
             torch.cuda.ipc_collect()
 
         print("🧹 RealCUGAN memory released.")
+
+    def __str__(self):
+        return f"RealCUGAN(onnx_model_path={self.onnx_model_path}, cache_dir={self.cache_dir}, tile_width={self.tile_width}, tile_height={self.tile_height}, tile_pad={self.tile_pad}, scale={self.scale})"

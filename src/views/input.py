@@ -1,8 +1,8 @@
 import flet as ft
 import os
 import subprocess
-import json
 import asyncio
+import av
 from views.generic import GenericView, ViewTitle, GenericContainer, Label
 
 __all__ = ["InputView"]
@@ -26,6 +26,61 @@ def get_icon_from_stream_type(type: str):
         case _:
             return ft.Icons.DATA_OBJECT_OUTLINED
 
+def get_all_metadata(file_path):
+    metadata = []
+
+    with av.open(file_path) as container:
+        for stream in container.streams:
+            stream_info = {
+                "index": stream.index,
+                "type": stream.type,
+                "codec": stream.codec_context.name if stream.codec_context else "unknown",
+                "duration": stream.duration,
+                "metadata": stream.metadata,
+            }
+
+            match stream.type:
+                case 'video':
+                    # stream: av.VideoStream
+                    frames = stream.frames
+                    if not stream.frames:
+                        duration = stream.duration
+                        time_base = stream.time_base
+                        fps = stream.average_rate
+                        if duration and time_base and fps:
+                            duration_seconds = float(duration * time_base)
+                            calculated_frames = int(round(duration_seconds * float(fps)))
+                            frames = calculated_frames
+                        else:
+                            demuxer = container.demux(stream)
+                            frames = sum(1 for _ in demuxer)
+
+                    stream_info.update({
+                        "width": stream.width,
+                        "height": stream.height,
+                        "fps": stream.average_rate,
+                        "nb_frames": frames,
+                        "pix_fmt": stream.pix_fmt if stream.pix_fmt else "unknown",
+                    })
+                case 'audio':
+                    # stream: av.AudioStream
+                    stream_info.update({
+                        "name": stream.name if stream.name else "",
+                        "language": stream.language if stream.language else "",
+                        "sample_rate": stream.sample_rate,
+                        "channels": stream.channels,
+                        "layout": stream.layout.name,
+                    })
+                case 'subtitle':
+                    stream_info.update({
+                        "name": stream.name if stream.name else "",
+                        "language": stream.language if stream.language else "",
+                    })
+
+            metadata.append(stream_info)
+
+    return metadata
+
 
 @ft.control
 class StreamMetadata(ft.Column):
@@ -36,11 +91,11 @@ class StreamMetadata(ft.Column):
         self.controls = [
             ft.Row([
                 Label("Codec:"),
-                ft.Text(f"{metadata.get('codec_name', 'unknown')}, {metadata.get('codec_long_name', 'unknown')}"),
+                ft.Text(f"{metadata.get('codec', 'unknown')}"),
             ]),
             ft.Row([
                 Label("Type:"),
-                ft.Text(metadata.get("codec_type", "unknown")),
+                ft.Text(metadata.get("type", "unknown")),
             ])
         ] + content + [
             ft.Row([
@@ -71,7 +126,11 @@ class VideoStreamMetadata(StreamMetadata):
                 ]),
                 ft.Row([
                     Label("FPS:"),
-                    ft.Text(metadata.get("avg_frame_rate", "unknown"))
+                    ft.Text(str(metadata.get("fps", "unknown")))
+                ]),
+                ft.Row([
+                    Label("Number of frames:"),
+                    ft.Text(metadata.get("nb_frames", "unknown"))
                 ]),
                 ft.Row([
                     Label("Pixel format:"),
@@ -88,12 +147,12 @@ class AudioStreamMetadata(StreamMetadata):
             metadata,
             [
                 ft.Row([
-                    Label("Title:"),
-                    ft.Text(metadata.get('tags', {}).get('title', ""))
+                    Label("Name:"),
+                    ft.Text(metadata.get('name', ""))
                 ]),
                 ft.Row([
                     Label("Language:"),
-                    ft.Text(metadata.get('tags', {}).get('language', 'unknown'))
+                    ft.Text(metadata.get('language', 'unknown'))
                 ]),
                 ft.Row([
                     Label("Sample rate:"),
@@ -105,7 +164,7 @@ class AudioStreamMetadata(StreamMetadata):
                 ]),
                 ft.Row([
                     Label("Channel layout:"),
-                    ft.Text(metadata.get("channel_layout", "unknown"))
+                    ft.Text(metadata.get("layout", "unknown"))
                 ])
             ]
         )
@@ -117,12 +176,12 @@ class SubtitleStreamMetadata(StreamMetadata):
             metadata,
             [
                 ft.Row([
-                    Label("Title:"),
-                    ft.Text(metadata.get('tags', {}).get('title', ""))
+                    Label("Name:"),
+                    ft.Text(metadata.get('name', ""))
                 ]),
                 ft.Row([
                     Label("Language:"),
-                    ft.Text(metadata.get('tags', {}).get('language', 'unknown'))
+                    ft.Text(metadata.get('language', 'unknown'))
                 ]),
             ]
         )
@@ -143,17 +202,17 @@ def build_metadata_view(type: str, metadata: dict):
 @ft.control
 class FileStreams(ft.Tabs):
     def __init__(self, metadata: dict):
-        self.streams = [ build_metadata_view(s.get("codec_type", ""), s) for s in metadata["streams"] ]
+        self.streams = [ build_metadata_view(s.get("type", ""), s) for s in metadata ]
         super().__init__(
-            length = len(metadata["streams"]),
+            length = len(metadata),
             content = ft.Column(
                 controls=[
                     ft.TabBar(
                         tabs=[
                             ft.Tab(
                                 label=f"Stream {s['index']}",
-                                icon=ft.Icon(get_icon_from_stream_type(s.get("codec_type", "")), size=18)
-                            ) for s in metadata["streams"]
+                                icon=ft.Icon(get_icon_from_stream_type(s.get("type", "")), size=18)
+                            ) for s in metadata
                         ]
                     ),
                     ft.TabBarView(
@@ -270,8 +329,8 @@ class InputView(GenericView):
         self.page.pop_dialog()
 
     async def handle_file_selection(self, e: ft.Event[ft.Button]):
-        e.control.disabled = True
-        e.control.update()
+        e.page.disabled = True
+        e.page.update()
         self.loading_ring.visible = True
         self.loading_ring.value = 0
         self.loading_ring.update()
@@ -291,25 +350,11 @@ class InputView(GenericView):
             if not os.path.exists(str(file.path)):
                 continue
 
-            ffprobe_cmd = (
-                'ffprobe',
-                '-v', 'quiet',
-                '-print_format', 'json',
-                '-show_streams',
-                file.path
-            )
+            try:
+                metadata = await asyncio.to_thread(get_all_metadata, file.path)
+            except Exception as error:
+                print(f"❌ Failed to parse metadata for {file.name} ({file.path}): {error}")
 
-            process = await asyncio.create_subprocess_exec(
-                *ffprobe_cmd,
-                stdout=asyncio.subprocess.PIPE,
-                creationflags=subprocess.CREATE_NO_WINDOW
-            )
-
-            stdout, _ = await process.communicate()
-            if process.returncode != 0:
-                print(f"❌ Failed to parse metadata for {file.name} ({file.path})")
-
-            metadata = json.loads(stdout.decode('utf-8'))
             self.picked_file.append(FileField(self.picked_file, file, metadata))
             print(f"ℹ️ Added {file.name} ({file.path}) to selection")
             self.file_container.update()
@@ -317,8 +362,8 @@ class InputView(GenericView):
         self.loading_ring.visible = False
         self.loading_ring.update()
         self.file_container.update()
-        e.control.disabled = False
-        e.control.update()
+        e.page.disabled = False
+        e.page.update()
 
     def build_files_data(self):
         return [file.get_file_attr() for file in self.picked_file]

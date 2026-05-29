@@ -205,3 +205,6 @@ class RIFE(VideoTransformer):
             torch.cuda.ipc_collect()
 
         print("🧹 RIFE memory released.")
+
+    def __str__(self):
+        return f"RIFE(onnx_model_path={self.onnx_model_path}, cache_dir={self.cache_dir})"

@@ -15,17 +15,17 @@ class EncodeView(GenericView):
         self.video_bitrate = TextField(value="3000k", label="Video bitrate", expand=True)
         self.__video_bitrate_settings = ft.Row([Label("Bitrate"), self.video_bitrate])
         self.video_use_crf = ft.Switch(
-            label=ft.Row([Label("Use CRF/CQ"), ft.Icon(ft.Icons.HELP_OUTLINE, size=18)]),
+            label=ft.Row([Label("Use CRF"), ft.Icon(ft.Icons.HELP_OUTLINE, size=18)]),
             label_position=ft.LabelPosition.LEFT,
             on_change=self.handle_use_crf,
-            tooltip="Constant Rate Factor/Constant Quality is an intelligent encoding mode that automatically adjusts bitrate frame-by-frame\nto maintain a constant, unvarying level of visual quality throughout the entire video"
+            tooltip="Constant Rate Factor is an intelligent encoding mode that automatically adjusts bitrate frame-by-frame\nto maintain a constant, unvarying level of visual quality throughout the entire video"
         )
         self.video_crf = TextField(
             value="25",
-            label="Constant Rate Factor/Constant Quality",
+            label="Constant Rate Factor",
             expand=True
         )
-        self.__video_crf_settings = ft.Row([Label("CRF/CQ"), self.video_crf], visible=False)
+        self.__video_crf_settings = ft.Row([Label("CRF"), self.video_crf], visible=False)
         self.video_pixel_format = TextField(value="yuv420p10le", label="Pixel format", expand=True)
         self.video_preset = TextField(value="4", label="Encoder preset", expand=True)
         self.video_custom = TextField(label="Custom arguments for video", expand=True)

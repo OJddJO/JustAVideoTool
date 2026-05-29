@@ -2,12 +2,14 @@ import modules.setup
 
 import flet as ft
 import os
+from fractions import Fraction
 
 from views.generic import GenericView
 from views.input import InputView
 from views.transform import TransformView
 from views.encode import EncodeView
 from views.console import ConsoleView
+
 
 class RunnerControlButton(ft.Column):
     def __init__(self, name: str, icon: ft.Icons, color: ft.Colors, callback, visible=True):
@@ -36,6 +38,8 @@ class VideoTool:
         self.encode = EncodeView()
 
         self.views_list = [self.input, self.transform, self.encode, ConsoleView()]
+        for view in self.views_list:
+            self.page.overlay.extend(view.overlay)
 
         self.run_button = RunnerControlButton("Run", ft.Icons.PLAY_ARROW_OUTLINED, None, self.run, True)
         self.stop_button = RunnerControlButton("Stop", ft.Icons.STOP_OUTLINED, ft.Colors.RED_300, self.stop, False)
@@ -79,43 +83,59 @@ class VideoTool:
 
     async def evHandler_navbar(self, e: ft.Event[ft.NavigationRail]):
         self.view_container.content = self.views_list[e.control.selected_index]
-        del self.page.overlay[1:]
-        self.page.overlay.extend(self.views_list[e.control.selected_index].overlay)
 
     async def run(self, e: ft.Event[ft.Button]):
+        print("\nℹ️ Setting up pipeline...")
         self.run_button.disabled = True
         self.run_button.update()
 
         # ---- Setup the data ----
         pipeline = await self.transform.build_pipeline()
         files = self.input.build_files_data()
-        encoding_params = self.encode.get_params()
+        enc = self.encode.get_params()
 
-        os.makedirs(encoding_params["out_dir"], exist_ok=True)
-        cmds = []
+        os.makedirs(enc["out_dir"], exist_ok=True)
+        ffmpeg_cmds = []
         for file in files:
             video_stream = None
-            for s in file["streams"]:
-                if s.get("codec_type", "") == "video":
-                    video_stream = s
-                    break
+            if pipeline:
+                for s in file["streams"]:
+                    if s.get("type", "") == "video":
+                        video_stream = s
+                        break
 
-            if video_stream is None:
-                print(f"⚠️ File {file.name} ({file.path}) doesn't have video stream. Skipped")
-                continue
+                if video_stream is None:
+                    print(f"⚠️ File {file["name"]} ({file["path"]}) doesn't have video stream. Skipped")
+                    continue
 
-            width = video_stream.width * pipeline.width_factor
-            height = video_stream.height * pipeline.height_factor
-            fps: str = video_stream.avg_frame_rate
-            if fps.find("/") == -1:
-                fps_num = int(fps) * pipeline.framegen_factor
-            else:
-                fps_num, fps_den, *_ = video_stream.avg_frame_rate.split("/")
-                fps_num = int(fps_num) * pipeline.framegen_factor
+                width = video_stream["width"] * pipeline.width_factor
+                height = video_stream["height"] * pipeline.height_factor
+                fps: Fraction = video_stream["fps"]
+                fps_num = fps.numerator * pipeline.framegen_factor
+                fps_den = fps.denominator
 
-            cmd = f"ffmpeg -hide_banner -v error -y -i - -f rawvideo -pix_fmt rgb24 -s {width}x{height} -r {fps_num}/{fps_den} "
-            print(cmd)
+                cmd = f'ffmpeg -y -f rawvideo -pix_fmt rgb24 -s {width}x{height} -r {fps_num}/{fps_den} -i - -i "{file["path"]}" '
+                # Video
+                cmd += '-map 0:v:0 '
+                cmd += f'-c:v {enc["video"]["codec"]} -pix_fmt {enc["video"]["pix_fmt"]} -preset {enc["video"]["preset"]} '
+                if enc["video"]["use_crf"]:
+                    cmd += f'-crf {enc["video"]["crf"]} '
+                else:
+                    cmd += f'-b:v {enc["video"]["bitrate"]} '
+                cmd += enc["video"]["custom"] + " "
+                # Audio
+                for stream in file["streams"]:
+                    if stream["type"] == "audio" and stream["include"]:
+                        cmd += f'-map 1:{stream["index"]} '
+                cmd += f'-c:a {enc["audio"]["codec"]} -b:a {enc["audio"]["bitrate"]} -ar {enc["audio"]["samplerate"]} -af {enc["audio"]["filter"]} {enc["audio"]["custom"]} '
+                # Subtitle
+                for stream in file["streams"]:
+                    if stream["type"] == "subtitle" and stream["include"]:
+                        cmd += f'-map 1:{stream["index"]} '
+                cmd += f'-c:s {enc["subtitle"]["codec"]} {enc["subtitle"]["custom"]} '
 
+                cmd += f'-hide_banner -v error "{os.path.join(enc["out_dir"], file["name"])}"'
+                ffmpeg_cmds.append(cmd)
         # ------------------------
 
         self.run_button.visible = False

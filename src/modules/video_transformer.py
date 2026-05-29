@@ -28,3 +28,10 @@ class VideoTransformer(ABC):
         Override this in subclasses to clear execution providers and CUDA caches.
         """
         pass
+
+    @abstractmethod
+    def __str__(self):
+        """
+        Returns a string representing the class with the parameters
+        """
+        pass
