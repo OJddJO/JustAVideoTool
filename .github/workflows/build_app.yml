@@ -1,8 +1,6 @@
 name: Build Flet App
 
 on:
-  push:
-  pull_request:
   workflow_dispatch:
 
 env:
