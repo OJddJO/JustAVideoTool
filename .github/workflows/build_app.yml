@@ -41,7 +41,7 @@ jobs:
     - name: Install Requirements
       run: |
         # Explicitly hitting your custom CUDA 12.6 wheels repository index
-        pip install --extra-index-url https://download.pytorch.org/whl/cu126 https://pypi.nvidia.com -r requirements.txt
+        pip install --extra-index-url https://download.pytorch.org/whl/cu126 --extra-index-url https://pypi.nvidia.com -r requirements.txt
 
     - name: Install Flet CLI Tools
       run: pip install "flet[cli]"
