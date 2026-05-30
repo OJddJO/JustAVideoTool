@@ -18,7 +18,7 @@ def create_window_3d(window_size, channel=1):
     _1D_window = gaussian(window_size, 1.5).unsqueeze(1)
     _2D_window = _1D_window.mm(_1D_window.t())
     _3D_window = _2D_window.unsqueeze(2) @ (_1D_window.t())
-    window = _3D_window.expand(1, channel, window_size, window_size, window_size).contiguous().to('cuda')
+    window = _3D_window.expand(1, channel, window_size, window_size, window_size).to('cuda').contiguous()
     return window
 
 def ssim_matlab(img1, img2, window_size=11, window=None, size_average=True, full=False, val_range=None):
@@ -114,7 +114,7 @@ class RIFE(VideoTransformer):
             }),
             ('CUDAExecutionProvider', {'device_id': 0}),
         ]
-        print("⏳ Initializing RIFE... (Compilation may take time if using TensorRT)")
+        print("⏳ Initializing RIFE... (Compilation may take time if using TensorRT and will freeze the GUI)")
 
         self.session = ort.InferenceSession(self.onnx_model_path, providers=providers)
 
@@ -136,7 +136,7 @@ class RIFE(VideoTransformer):
         self.input_name = self.session.get_inputs()[0].name
         self.output_name = self.session.get_outputs()[0].name
 
-        self.timestep = torch.full((1, 1, self.padded_height, self.padded_width), 0.5, dtype=torch.float32, device='cuda')
+        self.timestep = torch.full((1, 1, self.padded_height, self.padded_width), 0.5, dtype=torch.float32, device='cuda').contiguous()
 
         x_indices = np.arange(self.padded_width, dtype=np.float32)
         y_indices = np.arange(self.padded_height, dtype=np.float32)
@@ -145,49 +145,47 @@ class RIFE(VideoTransformer):
         gx = 2.0 * gx / (self.padded_width - 1) - 1.0
         gy = 2.0 * gy / (self.padded_height - 1) - 1.0
 
-        self.grid_x = torch.from_numpy(gx).cuda(non_blocking=True).unsqueeze(0).unsqueeze(0)
-        self.grid_y = torch.from_numpy(gy).cuda(non_blocking=True).unsqueeze(0).unsqueeze(0)
+        self.grid_x = torch.from_numpy(gx).cuda(non_blocking=True).unsqueeze(0).unsqueeze(0).contiguous()
+        self.grid_y = torch.from_numpy(gy).cuda(non_blocking=True).unsqueeze(0).unsqueeze(0).contiguous()
 
         mx = np.full((self.padded_height, self.padded_width), 2.0 / (self.padded_width - 1), dtype=np.float32)
         my = np.full((self.padded_height, self.padded_width), 2.0 / (self.padded_height - 1), dtype=np.float32)
 
-        self.mult_x = torch.from_numpy(mx).cuda(non_blocking=True).unsqueeze(0).unsqueeze(0)
-        self.mult_y = torch.from_numpy(my).cuda(non_blocking=True).unsqueeze(0).unsqueeze(0)
+        self.mult_x = torch.from_numpy(mx).cuda(non_blocking=True).unsqueeze(0).unsqueeze(0).contiguous()
+        self.mult_y = torch.from_numpy(my).cuda(non_blocking=True).unsqueeze(0).unsqueeze(0).contiguous()
 
         print("✅ RIFE ready!")
 
     def get_info(self):
         return (1, 1, 2)
 
-    def transform(self, current_frame: np.ndarray[Any, np.uint8]) -> list[np.ndarray[Any, np.uint8]]:
-        h, w, _ = current_frame.shape
+    def transform(self, current_frame: torch.Tensor) -> list[torch.Tensor]:
+        _, _, h, w = current_frame.shape
         if not self.session:
             self.padded_height = ((h - 1) // 128 + 1) * 128
             self.padded_width = ((w - 1) // 128 + 1) * 128
             self.padding = (0, self.padded_width - w, 0, self.padded_height - h)
             self.init_engine()
 
-        cur_frame_t = torch.from_numpy(current_frame).to('cuda', non_blocking=True).permute(2, 0, 1).unsqueeze(0).float() / 255.0
-        cur_small_np = cv2.resize(current_frame, (32, 32), interpolation=cv2.INTER_LINEAR)
-        ssim_cur_frame = torch.from_numpy(np.transpose(cur_small_np, (2, 0, 1))).unsqueeze(0).float() / 255.0
-        cur_frame_t_pad = F.pad(cur_frame_t, self.padding, mode="replicate")
+        ssim_cur_frame = F.interpolate(current_frame, (32, 32), mode="bilinear", align_corners=False)
+        current_frame_pad = F.pad(current_frame, self.padding, mode="replicate")
 
         # First frame, can't generate frame from nothing
         if self.previous_frame is None:
-            self.previous_frame = cur_frame_t
+            self.previous_frame = current_frame
             self.ssim_prev_frame = ssim_cur_frame
-            self.prev_frame_t_pad = cur_frame_t_pad
+            self.prev_frame_t_pad = current_frame_pad
             return [current_frame]
 
         ssim = ssim_matlab(self.ssim_prev_frame[:, :3], ssim_cur_frame[:, :3])
         if ssim < 0.05 or ssim > 0.996:
-            self.previous_frame = cur_frame_t
+            self.previous_frame = current_frame
             self.ssim_prev_frame = ssim_cur_frame
-            self.prev_frame_t_pad = cur_frame_t_pad
+            self.prev_frame_t_pad = current_frame_pad
             return [current_frame, current_frame]
 
         torch.cat(
-            (self.prev_frame_t_pad, cur_frame_t_pad, self.timestep, self.grid_x, self.grid_y, self.mult_x, self.mult_y),
+            (self.prev_frame_t_pad, current_frame_pad, self.timestep, self.grid_x, self.grid_y, self.mult_x, self.mult_y),
             1,
             out=self.gpu_input
         )
@@ -195,13 +193,12 @@ class RIFE(VideoTransformer):
         self.session.run_with_iobinding(self.io_binding)
 
         output_tensor = self.gpu_output
-        final_frame_tensor = output_tensor[:, :, :h, :w]
-        final_frame_np = (final_frame_tensor.squeeze(0).permute(1, 2, 0).clamp(0, 1) * 255).to(torch.uint8).cpu().numpy()
-        self.previous_frame = cur_frame_t
+        gen_frame = output_tensor[:, :, :h, :w].clamp(0, 1)
+        self.previous_frame = current_frame
         self.ssim_prev_frame = ssim_cur_frame
-        self.prev_frame_t_pad = cur_frame_t_pad
+        self.prev_frame_t_pad = current_frame_pad
 
-        return [final_frame_np, current_frame]
+        return [gen_frame, current_frame]
 
     def release_memory(self):
         if self.session is not None:

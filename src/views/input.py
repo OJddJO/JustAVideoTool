@@ -295,7 +295,7 @@ class FileField(GenericContainer):
 
     async def remove_from_container(self):
         self.container.remove(self)
-        print(f"ℹ️ Removed {self.filename} ({self.filepath}) from selection")
+        print(f"➖ Removed {self.filename} ({self.filepath}) from selection")
 
     def get_file_attr(self) -> dict:
         return {
@@ -379,7 +379,7 @@ class InputView(GenericView):
                 print(f"❌ Failed to parse metadata for {file.name} ({file.path}): {error}")
 
             self.picked_file.append(FileField(self.picked_file, file, metadata))
-            print(f"ℹ️ Added {file.name} ({file.path}) to selection")
+            print(f"➕ Added {file.name} ({file.path}) to selection")
             self.file_container.update()
 
         self.loading_ring.visible = False

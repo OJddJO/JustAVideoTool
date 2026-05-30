@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-import numpy as np
+import torch
 from typing import Any
 
 class VideoTransformer(ABC):
@@ -15,10 +15,10 @@ class VideoTransformer(ABC):
         pass
 
     @abstractmethod
-    def transform(self, frame: np.ndarray[Any, np.uint8]) -> list[np.ndarray[Any, np.uint8]]:
+    def transform(self, frame: torch.Tensor) -> list[torch.Tensor]:
         """
-        Accepts an interleaved RGB image array of shape (H, W, 3) with range [0, 255].
-        Returns a list of processed interleaved RGB array of shape (New_H, New_W, 3).
+        Accepts an interleaved RGB image array of shape (1, 3, H, W) with range [0, 1].
+        Returns a list of processed interleaved RGB array of shape (1, 3, New_H, New_W).
         """
         pass
 

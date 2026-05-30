@@ -4,6 +4,7 @@ import asyncio
 import subprocess
 import shlex
 import time
+import traceback
 from views.generic import GenericView, GenericContainer, ViewTitle, TextField
 from modules.modular_pipeline import ModularProcessingPipeline
 
@@ -99,7 +100,7 @@ class ConsoleView(GenericView):
             self.frame_progress.value = 0
             if self.console_focused: self.frame_progress.update()
             try:
-                for frame_bytes, w ,h in pipeline.stream_pipeline(file["path"]):
+                for frame_bytes in pipeline.stream_pipeline(file["path"]):
                     if self.is_cancelled:
                         print("🛑 Cancellation detected! Terminating FFmpeg...")
                         if ffmpeg_process: ffmpeg_process.terminate()  # Instantly kills the FFmpeg process safely
@@ -125,7 +126,8 @@ class ConsoleView(GenericView):
                         time.sleep(0.1)
 
             except Exception as pipe_err:
-                print(f"❌ Pipeline error on {file['name']}: {pipe_err}")
+                error_traceback = traceback.format_exc()
+                print(f"❌ Pipeline error on {file['name']}:\n{error_traceback}\n{pipe_err}")
                 if ffmpeg_process and ffmpeg_process.stdin and not ffmpeg_process.stdin.closed:
                     ffmpeg_process.stdin.close()
 

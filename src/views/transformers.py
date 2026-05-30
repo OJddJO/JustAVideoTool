@@ -168,13 +168,6 @@ CUGAN (Cascaded-U-Net GAN): Specifically optimized for Anime, Manga, and Cartoon
                     ft.Icon(ft.Icons.HELP_OUTLINE, size=18, tooltip="Please choose the correct model if modifying the scale factor."),
                     self.scale_factor
                 ], expand=True)
-            ],
-            advanced_settings=[
-                ft.Row([
-                    ft.Text("Cache directory", size=16, weight=ft.FontWeight.BOLD),
-                    self.cache_dir,
-                    ft.Button("Choose directory", icon=ft.Icons.FOLDER_OPEN_OUTLINED, on_click=self.choose_cache_dir)
-                ],expand=True)
             ]
         )
 

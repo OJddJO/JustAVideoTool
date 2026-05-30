@@ -51,7 +51,7 @@ class RealESRGAN(VideoTransformer):
             }),
             ('CUDAExecutionProvider', {'device_id': 0}),
         ]
-        print("⏳ Initializing RealESRGAN... (Compilation may take time if using TensorRT)")
+        print("⏳ Initializing RealESRGAN... (Compilation may take time if using TensorRT and will freeze the GUI)")
         self.session = ort.InferenceSession(self.onnx_model_path, providers=providers)
 
         io_in_shape = (1, 3, dim_h, dim_w)
@@ -80,61 +80,50 @@ class RealESRGAN(VideoTransformer):
     def get_info(self):
         return (self.scale, self.scale, 1)
 
-    def transform(self, frame: np.ndarray[Any, np.uint8]) -> list[np.ndarray[Any, np.uint8]]:
+    def transform(self, frame: torch.Tensor) -> list[torch.Tensor]:
         if not self.session:
             self.init_engine()
 
-        H, W, C = frame.shape
+        _, c, h, w = frame.shape
 
-        # 1. Move the raw frame to the GPU immediately
-        frame_t = torch.from_numpy(frame).to('cuda')
-
-        # 2. Create an empty blank canvas for the upscaled output on the GPU
-        out_frame_t = torch.zeros((H * self.scale, W * self.scale, C), dtype=torch.uint8, device='cuda')
+        out_frame_t = torch.zeros((1, c, h * self.scale, w * self.scale), dtype=torch.float32, device='cuda')
 
         target_h = self.tile_height + (2 * self.tile_pad)
         target_w = self.tile_width + (2 * self.tile_pad)
 
         # Loop through the grid using respective height and width
-        for y in range(0, H, self.tile_height):
-            for x in range(0, W, self.tile_width):
+        for y in range(0, h, self.tile_height):
+            for x in range(0, w, self.tile_width):
                 # Determine boundaries for this rectangular tile
-                y_end = min(y + self.tile_height, H)
-                x_end = min(x + self.tile_width, W)
+                y_end = min(y + self.tile_height, h)
+                x_end = min(x + self.tile_width, w)
 
                 # Expand extraction bounds to grab REAL surrounding pixels for context
                 y_ext_start = max(0, y - self.tile_pad)
-                y_ext_end = min(H, y_end + self.tile_pad)
+                y_ext_end = min(h, y_end + self.tile_pad)
                 x_ext_start = max(0, x - self.tile_pad)
-                x_ext_end = min(W, x_end + self.tile_pad)
+                x_ext_end = min(w, x_end + self.tile_pad)
 
                 # Extract the expanded patch natively on GPU
-                patch = frame_t[y_ext_start:y_ext_end, x_ext_start:x_ext_end, :].permute(2, 0, 1)
+                patch = frame[:, :, y_ext_start:y_ext_end, x_ext_start:x_ext_end]
 
                 # Calculate how much synthetic padding is still missing
                 # (due to hitting the very edge of the video frame, or dead space on the right/bottom)
                 pad_top = self.tile_pad - (y - y_ext_start)
                 pad_left = self.tile_pad - (x - x_ext_start)
 
-                pad_bot = target_h - (patch.shape[1] + pad_top)
-                pad_right = target_w - (patch.shape[2] + pad_left)
+                pad_bot = target_h - (patch.shape[2] + pad_top)
+                pad_right = target_w - (patch.shape[3] + pad_left)
 
                 # Fill in the missing boundary/dead space with replication safely
                 padded_patch = F.pad(patch, (pad_left, pad_right, pad_top, pad_bot), mode='replicate')
 
-                # Normalize and add batch dimension -> (1, C, H, W)
-                input_tensor = (padded_patch.unsqueeze(0).float() / 255.0)
-
                 # Copy current tile into the pre-bound GPU memory
-                self.gpu_input.copy_(input_tensor, non_blocking=True)
+                self.gpu_input.copy_(padded_patch)
 
-                torch.cuda.synchronize()
                 # Execute ONNX Runtime (Reads from VRAM, Writes to VRAM)
+                torch.cuda.synchronize()
                 self.session.run_with_iobinding(self.io_binding)
-
-                # Reconstruct output mapping natively on GPU from the bound output tensor
-                out_patch = self.gpu_output.squeeze(0).permute(1, 2, 0)
-                out_patch = torch.clamp(out_patch * 255.0, 0, 255).byte()
 
                 # Crop out ONLY the valid region
                 c_y_top = self.tile_pad * self.scale
@@ -142,26 +131,23 @@ class RealESRGAN(VideoTransformer):
                 c_y_bot = c_y_top + (y_end - y) * self.scale
                 c_x_right = c_x_left + (x_end - x) * self.scale
 
-                valid_patch = out_patch[c_y_top:c_y_bot, c_x_left:c_x_right, :]
+                valid_patch = self.gpu_output[:, :, c_y_top:c_y_bot, c_x_left:c_x_right]
 
                 # Stitch the successfully upscaled chunk back into the master GPU frame
-                out_frame_t[y * self.scale : y_end * self.scale,
-                            x * self.scale : x_end * self.scale, :] = valid_patch
+                out_frame_t[:, :, y * self.scale : y_end * self.scale,
+                            x * self.scale : x_end * self.scale] = valid_patch.clamp(0, 1)
 
-        # 3. Transfer the final stitched frame back to the CPU/NumPy just once
-        return [out_frame_t.cpu().numpy()]
-
+        return [out_frame_t]
 
     def release_memory(self):
-        # 1. Delete the ONNX Runtime session to free the TensorRT VRAM context
         if self.session is not None:
             del self.session
             self.session = None
 
-        # 2. Force Python to clean up deleted object references
+        self.gpu_input = None
+        self.gpu_output = None
         gc.collect()
 
-        # 3. Force PyTorch to release its reserved VRAM back to the OS
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
             torch.cuda.ipc_collect()

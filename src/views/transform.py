@@ -104,22 +104,6 @@ class SelectorView(GenericView):
         await self.hide(e)
 
 @ft.control
-class PipelineParams(GenericContainer):
-    def __init__(self):
-        super().__init__()
-        self.batch_size = NumberInput(value="32", label="Batch size", expand=True)
-        self.expand = False
-        self.content = ft.Column(
-            [
-                ft.Row([
-                    ft.Text("Frame batching", size=16, weight=ft.FontWeight.BOLD),
-                    ft.Icon(ft.Icons.HELP_OUTLINE, size=18, tooltip="Increasing batch size can improve performance, but uses more RAM"),
-                    self.batch_size,
-                ], expand=True)
-            ],
-        )
-
-@ft.control
 class TransformView(GenericView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -138,12 +122,9 @@ class TransformView(GenericView):
         self.transformers: list[TransformerLayer] = []
         self.selector_view = SelectorView(self.transformers)
         self.overlay = [GenericOverlay(self.selector_view)]
-        self.pipeline_params = PipelineParams()
         self.content = ft.Column(
             [
                 ft.Text("Transform", size=28, weight=ft.FontWeight.BOLD),
-                self.pipeline_params,
-                ft.Divider(),
                 ft.ReorderableListView(
                     expand=True,
                     show_default_drag_handles=False,
@@ -175,9 +156,7 @@ class TransformView(GenericView):
         e.control.update()
 
     async def build_pipeline(self) -> ModularProcessingPipeline:
-        pipeline = ModularProcessingPipeline(
-            int(self.pipeline_params.batch_size.value)
-        )
+        pipeline = ModularProcessingPipeline()
 
         for e in self.transformers:
             layer = await e.build_transformer()

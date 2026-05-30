@@ -1,13 +1,13 @@
 import av
 import numpy as np
+import torch
 
 from modules.video_transformer import VideoTransformer
 
 class ModularProcessingPipeline:
-    def __init__(self, batch_size: int = 64):
+    def __init__(self):
+        print(f"ℹ️ Initializing pipeline")
         self.transformers: list[VideoTransformer] = []
-        self.batch_size = batch_size
-        print(f"ℹ️ Batch size for frame processing: {self.batch_size}")
         self.width_factor = 1
         self.height_factor = 1
         self.framegen_factor = 1
@@ -15,7 +15,7 @@ class ModularProcessingPipeline:
     def add_stage(self, transformer: VideoTransformer):
         """Appends a new transformer block stage to the processing assembly line."""
         self.transformers.append(transformer)
-        print(f"➕ Added {transformer.__class__.__name__}")
+        print(f"➕ Added {str(transformer)}")
         wf, hf, fgf = transformer.get_info()
         self.width_factor *= wf
         self.height_factor *= hf
@@ -36,39 +36,28 @@ class ModularProcessingPipeline:
 
         try:
             if self.transformers:
-                batch: list[np.ndarray[np._AnyShape, np.uint8]] = []
                 for frame in container.decode(video_stream):
+                    gpu_frames: list[torch.Tensor] = []
                     raw_frame = frame.to_ndarray(format='rgb24').astype(np.uint8)
-                    batch.append(raw_frame)
+                    gpu_frames.append(
+                        torch
+                        .from_numpy(raw_frame)
+                        .to('cuda', non_blocking=True)
+                        .permute(2, 0, 1).unsqueeze(0).float() / 255.0
+                    )
 
-                    if len(batch) == self.batch_size:
-                        next_stage_batch = []
-                        for stage in self.transformers:
-                            for frame in batch:
-                                next_stage_batch.extend(stage.transform(frame))
-                            batch = next_stage_batch
-
-                        for processed_frame in batch:
-                            h, w, c = processed_frame.shape
-                            yield processed_frame.tobytes(), w, h
-
-                        batch.clear()
-
-                # Process the remaining frames
-                if batch:
-                    next_stage_batch = []
                     for stage in self.transformers:
-                        for frame in batch:
-                            next_stage_batch.extend(stage.transform(frame))
-                        batch = next_stage_batch
+                        new_gpu_frames: list[torch.Tensor] = []
+                        for gpu_frame in gpu_frames:
+                            new_gpu_frames.extend(stage.transform(gpu_frame))
+                        gpu_frames = new_gpu_frames
 
-                    for processed_frame in batch:
-                        h, w, c = processed_frame.shape
-                        yield processed_frame.tobytes(), w, h
+                    for gpu_frame in gpu_frames:
+                        processed_frame = (gpu_frame.squeeze(0).permute(1, 2, 0) * 255.0).to(torch.uint8).contiguous().cpu().numpy()
+                        yield processed_frame
             else:
                 for frame in container.decode(video_stream):
                     raw_frame = frame.to_ndarray(format='rgb24').astype(np.uint8)
-                    h, w, c = raw_frame.shape
-                    yield raw_frame, w, h
+                    yield raw_frame
         finally:
             container.close()
