@@ -1,100 +1,78 @@
-name: Build Flet App
+name: Build Desktop Application
 
 on:
   workflow_dispatch:
-
-env:
-  UV_PYTHON: 3.12
-  PYTHONUTF8: 1
-
-  # https://flet.dev/docs/reference/environment-variables
-  FLET_CLI_NO_RICH_OUTPUT: 1
+    inputs:
+      version_tag:
+        description: 'Release Version Tag (e.g., 1.0.0-pre1)'
+        required: true
+        default: '1.0.0-pre1'
+      release_name:
+        description: 'Release Title Name'
+        required: false
+        default: 'Unstable Release'
 
 jobs:
-  build:
-    name: Build ${{ matrix.name }}
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # -------- Desktop --------
-          # - name: linux
-          #   runner: ubuntu-latest
-          #   build_cmd: "flet build linux"
-          #   artifact_path: build/linux
-          #   needs_linux_deps: true
-
-          # - name: macos
-          #   runner: macos-26
-          #   build_cmd: "flet build macos"
-          #   artifact_path: build/macos
-          #   needs_linux_deps: false
-
-          - name: windows
-            runner: windows-latest
-            build_cmd: "flet build windows"
-            artifact_path: build/windows
-            needs_linux_deps: false
-
-          # -------- Android --------
-          # - name: aab
-          #   runner: ubuntu-latest
-          #   build_cmd: "flet build aab"
-          #   artifact_path: build/aab
-          #   needs_linux_deps: false
-
-          # - name: apk
-          #   runner: ubuntu-latest
-          #   build_cmd: "flet build apk"
-          #   artifact_path: build/apk
-          #   needs_linux_deps: false
-
-          # -------- iOS --------
-          # - name: ipa
-          #   runner: macos-26
-          #   build_cmd: "flet build ipa"
-          #   artifact_path: build/ipa
-          #   needs_linux_deps: false
-
-          # - name: ios-simulator
-          #   runner: macos-26
-          #   build_cmd: "flet build ios-simulator"
-          #   artifact_path: build/ios-simulator
-          #   needs_linux_deps: false
-
-          # -------- Web --------
-          # - name: web
-          #   runner: ubuntu-latest
-          #   build_cmd: "flet build web"
-          #   artifact_path: build/web
-          #   needs_linux_deps: false
+  build-windows:
+    runs-on: windows-latest
+    permissions:
+      contents: write
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - name: Checkout Code
+      uses: actions/checkout@v4
 
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v6
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        cache: 'pip'
 
-      - name: Install Linux dependencies
-        if: matrix.needs_linux_deps
-        shell: bash
-        run: |
-            sudo apt update --allow-releaseinfo-change
-            LINUX_DEPS="$(uv run python -c 'from flet.utils.linux_deps import linux_dependencies; print(" ".join(linux_dependencies))')"
-            sudo apt-get install -y --no-install-recommends $LINUX_DEPS
-            sudo apt-get clean
+    - name: Install Flutter SDK
+      uses: subosito/flutter-action@v2
+      with:
+        channel: 'stable'
 
-      - name: Build app
-        shell: bash
-        run: |
-          uv run ${{ matrix.build_cmd }} --yes --verbose
+    - name: Install System Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install setuptools wheel
 
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v5.0.0
-        with:
-          name: ${{ matrix.name }}-build-artifact
-          path: ${{ matrix.artifact_path }}
-          if-no-files-found: error
-          overwrite: false
+    - name: Install Requirements
+      run: |
+        # Explicitly hitting your custom CUDA 12.6 wheels repository index
+        pip install --extra-index-url https://download.pytorch.org/whl/cu126 https://pypi.nvidia.com -r requirements.txt
+
+    - name: Install Flet CLI Tools
+      run: pip install "flet[cli]"
+
+    - name: Package Application Executable
+      run: |
+        # Compiles Python files and bundles assets using your pyproject.toml configuration
+        flet build windows
+
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: Just-A-Video-Tool-Windows
+        path: build/windows/
+        if-no-files-found: error
+        retention-days: 7
+
+    - name: Compress Build Artifacts for Release
+      shell: powershell
+      run: |
+        # Compress the output folder to a neat .zip file for users to download easily
+        Compress-Archive -Path "build/windows/*" -DestinationPath "Just-A-Video-Tool-Windows.zip" -Force
+
+    - name: Create GitHub Release and Upload Asset
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ github.event.inputs.version_tag }}
+        name: "${{ github.event.inputs.release_name }} (${{ github.event.inputs.version_tag }})"
+        draft: true
+        prerelease: true
+        # Points directly to the compressed ZIP folder containing your build artifact asset
+        files: Just-A-Video-Tool-Windows.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

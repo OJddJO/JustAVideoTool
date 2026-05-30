@@ -1,0 +1,33 @@
+name: Promote Pre-Release to Stable
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_tag:
+        description: 'The tag version of the pre-release to promote (e.g., 1.0.0-pre1)'
+        required: true
+        default: '1.0.0-pre1'
+      stable_name:
+        description: 'New title name for the Stable Release'
+        required: false
+        default: 'Stable Release'
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Promote Release via GitHub CLI
+      run: |
+        echo "Looking for pre-release with tag: ${{ github.event.inputs.version_tag }}"
+
+        # 🌟 Using GitHub's native CLI tool (gh) which comes pre-installed on the runner
+        # This payload updates the release to remove draft/prerelease flags and rewrites the title
+        gh release edit "${{ github.event.inputs.version_tag }}" \
+          --name "${{ github.event.inputs.stable_name }} (${{ github.event.inputs.version_tag }})" \
+          --draft=false \
+          --prerelease=false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
