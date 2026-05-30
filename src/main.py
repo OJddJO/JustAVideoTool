@@ -47,7 +47,7 @@ class VideoTool:
         self.run_button = RunnerControlButton("Run", ft.Icons.PLAY_ARROW_OUTLINED, None, self.run, True)
         self.stop_button = RunnerControlButton("Stop", ft.Icons.STOP_OUTLINED, ft.Colors.RED_300, self.stop, False)
 
-        nav_sidebar = ft.Container(
+        self.nav_sidebar = ft.Container(
             content = ft.NavigationRail(
                 selected_index=0,
                 elevation=15,
@@ -74,7 +74,7 @@ class VideoTool:
             ft.SafeArea(
                 ft.Row(
                     [
-                        ft.Container(nav_sidebar),
+                        ft.Container(self.nav_sidebar),
                         self.view_container
                     ],
                     expand=True,
@@ -105,45 +105,92 @@ class VideoTool:
         os.makedirs(enc["out_dir"], exist_ok=True)
         ffmpeg_cmds = []
         for file in files:
-            if pipeline:
-                video_stream = None
-                for s in file["streams"]:
-                    if s.get("type", "") == "video":
-                        video_stream = s
-                        break
+            video_stream = None
+            for s in file["streams"]:
+                if s.get("type", "") == "video":
+                    video_stream = s
+                    break
 
-                if video_stream is None:
-                    print(f"⚠️ File {file["name"]} ({file["path"]}) doesn't have video stream. Skipped")
-                    continue
+            if video_stream is None:
+                print(f"⚠️ File {file["name"]} ({file["path"]}) doesn't have video stream. Skipped")
+                continue
 
-                width = video_stream["width"] * pipeline.width_factor
-                height = video_stream["height"] * pipeline.height_factor
-                fps: Fraction = video_stream["fps"]
-                fps_num = fps.numerator * pipeline.framegen_factor
-                fps_den = fps.denominator
+            width = video_stream["width"] * pipeline.width_factor
+            height = video_stream["height"] * pipeline.height_factor
+            fps: Fraction = video_stream["fps"]
+            fps_num = fps.numerator * pipeline.framegen_factor
+            fps_den = fps.denominator
 
-                cmd = f'ffmpeg -y -f rawvideo -pix_fmt rgb24 -s {width}x{height} -r {fps_num}/{fps_den} -i - -i "{file["path"]}" '
-                # Video
-                cmd += '-map 0:v:0 '
-                cmd += f'-c:v {enc["video"]["codec"]} -pix_fmt {enc["video"]["pix_fmt"]} -preset {enc["video"]["preset"]} '
-                if enc["video"]["use_crf"]:
-                    cmd += f'-crf {enc["video"]["crf"]} '
-                else:
-                    cmd += f'-b:v {enc["video"]["bitrate"]} '
-                cmd += enc["video"]["custom"] + " "
-                # Audio
-                for stream in file["streams"]:
-                    if stream["type"] == "audio" and stream["include"]:
-                        cmd += f'-map 1:{stream["index"]} '
-                cmd += f'-c:a {enc["audio"]["codec"]} -b:a {enc["audio"]["bitrate"]} -ar {enc["audio"]["samplerate"]} -af {enc["audio"]["filter"]} {enc["audio"]["custom"]} '
-                # Subtitle
-                for stream in file["streams"]:
-                    if stream["type"] == "subtitle" and stream["include"]:
-                        cmd += f'-map 1:{stream["index"]} '
-                cmd += f'-c:s {enc["subtitle"]["codec"]} {enc["subtitle"]["custom"]} '
+            cmd = f'ffmpeg -y -f rawvideo -pix_fmt rgb24 -s {width}x{height} -r {fps_num}/{fps_den} -i - -i "{file["path"]}" '
+            # Video
+            cmd += '-map 0:v:0 '
+            cmd += f'-c:v {enc["video"]["codec"]} -pix_fmt {enc["video"]["pix_fmt"]} -preset {enc["video"]["preset"]} '
+            if enc["video"]["use_crf"]:
+                cmd += f'-crf {enc["video"]["crf"]} '
+            else:
+                cmd += f'-b:v {enc["video"]["bitrate"]} '
+            cmd += enc["video"]["custom"] + " "
+            # Audio
+            for stream in file["streams"]:
+                if stream["type"] == "audio" and stream["include"]:
+                    cmd += f'-map 1:{stream["index"]} '
+            cmd += f'-c:a {enc["audio"]["codec"]} -b:a {enc["audio"]["bitrate"]} -ar {enc["audio"]["samplerate"]} -af {enc["audio"]["filter"]} {enc["audio"]["custom"]} '
+            # Subtitle
+            for stream in file["streams"]:
+                if stream["type"] == "subtitle" and stream["include"]:
+                    cmd += f'-map 1:{stream["index"]} '
+            cmd += f'-c:s {enc["subtitle"]["codec"]} {enc["subtitle"]["custom"]} '
+            # Other
+            for stream in file["streams"]:
+                if stream["include"] and stream["type"] not in ("video", "audio", "subtitle"):
+                    cmd += f'-map 1:{stream["index"]} '
+            cmd += f'-hide_banner -v error "{os.path.join(enc["out_dir"], file["name"])}"'
+            ffmpeg_cmds.append(cmd)
+        else:
+            cmd = f'ffmpeg -y -hwaccel auto -stats -stats_period 5 -i "{file["path"]}" '
+            # Video
+            cmd += '-map 0:v:0 '
+            cmd += f'-c:v {enc["video"]["codec"]} -pix_fmt {enc["video"]["pix_fmt"]} -preset {enc["video"]["preset"]} '
+            if enc["video"]["use_crf"]:
+                cmd += f'-crf {enc["video"]["crf"]} '
+            else:
+                cmd += f'-b:v {enc["video"]["bitrate"]} '
+            cmd += enc["video"]["custom"] + " "
+            # Audio
+            for stream in file["streams"]:
+                if stream["type"] == "audio" and stream["include"]:
+                    cmd += f'-map 0:{stream["index"]} '
+            cmd += f'-c:a {enc["audio"]["codec"]} -b:a {enc["audio"]["bitrate"]} -ar {enc["audio"]["samplerate"]} -af {enc["audio"]["filter"]} {enc["audio"]["custom"]} '
+            # Subtitle
+            for stream in file["streams"]:
+                if stream["type"] == "subtitle" and stream["include"]:
+                    cmd += f'-map 0:{stream["index"]} '
+            cmd += f'-c:s {enc["subtitle"]["codec"]} {enc["subtitle"]["custom"]} '
+            cmd += f'-hide_banner -v error "{os.path.join(enc["out_dir"], file["name"])}"'
+            ffmpeg_cmds.append(cmd)
 
-                cmd += f'-hide_banner -v error "{os.path.join(enc["out_dir"], file["name"])}"'
-                ffmpeg_cmds.append(cmd)
+        def thread_target():
+            try:
+                self.console.run_pipeline(
+                    files, pipeline, ffmpeg_cmds, video_stream["nb_frames"] * pipeline.framegen_factor if pipeline else None
+                )
+            finally:
+                e.page.run_task(self.handle_natural_completion)
+
+        self.pipeline_thread = threading.Thread(target=thread_target, daemon=True)
+
+        async def window_close_cleanup(e: ft.WindowEvent):
+            if e.type == ft.WindowEventType.CLOSE:
+                print("ℹ️ Exiting app, cleaning pipeline...")
+                self.console.cancel_pipeline()
+                while self.pipeline_thread.is_alive():
+                    await asyncio.sleep(0.1)
+                await self.page.window.destroy()
+
+        self.page.window.prevent_close = True
+        self.page.window.on_event = window_close_cleanup
+        self.page.update()
+
         print("✅ Pipeline setup done !")
         # ------------------------
 
@@ -153,22 +200,15 @@ class VideoTool:
         self.run_button.disabled = False
         self.stop_button.update()
 
-        def thread_target():
-            try:
-                self.console.run_pipeline(
-                    files, pipeline, ffmpeg_cmds, video_stream["nb_frames"] * pipeline.framegen_factor
-                )
-            finally:
-                e.page.run_task(self.handle_natural_completion)
-
-        self.pipeline_thread = threading.Thread(target=thread_target, daemon=True)
         self.pipeline_thread.start()
 
     async def handle_natural_completion(self):
         self.stop_button.visible = False
-        self.stop_button.update()
         self.run_button.visible = True
+        self.stop_button.update()
+        self.stop_button.disabled = False
         self.run_button.update()
+        self.page.window.prevent_close = False
 
     async def stop(self, e: ft.Event[ft.Button]):
         self.stop_button.disabled = True
@@ -178,11 +218,7 @@ class VideoTool:
         while self.pipeline_thread.is_alive():
             await asyncio.sleep(0.1)
 
-        self.stop_button.visible = False
-        self.run_button.visible = True
-        self.stop_button.update()
-        self.stop_button.disabled = False
-        self.run_button.update()
+        await self.handle_natural_completion()
 
 
 if __name__ == "__main__":

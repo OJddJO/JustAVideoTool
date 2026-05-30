@@ -4,6 +4,7 @@ import onnxruntime as ort
 import torch
 import torch.nn.functional as F
 import gc
+from typing import Any
 
 from modules.video_transformer import VideoTransformer
 
@@ -79,7 +80,7 @@ class RealESRGAN(VideoTransformer):
     def get_info(self):
         return (self.scale, self.scale, 1)
 
-    def transform(self, frame: np.ndarray[np._AnyShape, np.uint8]) -> list[np.ndarray[np._AnyShape, np.uint8]]:
+    def transform(self, frame: np.ndarray[Any, np.uint8]) -> list[np.ndarray[Any, np.uint8]]:
         if not self.session:
             self.init_engine()
 

@@ -258,11 +258,34 @@ class FileField(GenericContainer):
                     ft.Button("Open in explorer", icon=ft.Icons.FOLDER_OPEN, expand=True, on_click=self.open_in_explorer),
                     ft.Button("Remove from selection", icon=ft.Icons.REMOVE, expand=True, icon_color=ft.Colors.RED_300,
                                 color=ft.Colors.RED_300, on_click=self.remove_from_container)
+                ], margin=ft.Margin(top=10, bottom=10)),
+                ft.Row([
+                    ft.Button("Include all streams in output", icon=ft.Icons.CHECK_OUTLINED, expand=True, on_click=self.include_all_stream),
+                    ft.Button("Remove all streams from output", icon=ft.Icons.REMOVE_OUTLINED, expand=True, on_click=self.remove_all_stream),
+                    ft.Button("Invert stream inlcusion", icon=ft.Icons.SWAP_HORIZONTAL_CIRCLE_OUTLINED, expand=True, on_click=self.invert_all_stream)
                 ]),
                 self.streams
-            ],
-            controls_padding=ft.Padding(top=10),
+            ]
         )
+
+    async def include_all_stream(self, e: ft.Event[ft.Button]):
+        for stream in self.streams.streams:
+            stream.include.value = True
+            stream.include.update()
+
+    async def remove_all_stream(self, e: ft.Event[ft.Button]):
+        for stream in self.streams.streams:
+            if stream.metadata["type"] == "video":
+                continue
+            stream.include.value = False
+            stream.include.update()
+
+    async def invert_all_stream(self, e: ft.Event[ft.Button]):
+        for stream in self.streams.streams:
+            if stream.metadata["type"] == "video":
+                continue
+            stream.include.value = not stream.include.value
+            stream.include.update()
 
     async def open_in_explorer(self, e: ft.Event[ft.Button]):
         if self.filepath and os.path.exists(self.filepath):

@@ -6,6 +6,7 @@ import torch.nn.functional as F
 import cv2
 from math import exp
 import gc
+from typing import Any
 
 from modules.video_transformer import VideoTransformer
 
@@ -158,7 +159,7 @@ class RIFE(VideoTransformer):
     def get_info(self):
         return (1, 1, 2)
 
-    def transform(self, current_frame: np.ndarray[np._AnyShape, np.uint8]) -> list[np.ndarray[np._AnyShape, np.uint8]]:
+    def transform(self, current_frame: np.ndarray[Any, np.uint8]) -> list[np.ndarray[Any, np.uint8]]:
         h, w, _ = current_frame.shape
         if not self.session:
             self.padded_height = ((h - 1) // 128 + 1) * 128

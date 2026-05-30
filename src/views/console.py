@@ -12,7 +12,7 @@ class ConsoleView(GenericView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.log_file = None
-        self.log_running = False
+        self.console_focused = False
 
         self.text_field = TextField(
             expand=True,
@@ -45,27 +45,27 @@ class ConsoleView(GenericView):
         self.is_cancelled = False
 
     def did_mount(self):
-        self.log_running = True
+        self.console_focused = True
         self.page.run_task(self.tail_log)
 
     def will_unmount(self):
-        self.log_running = False
+        self.console_focused = False
 
     async def tail_log(self):
         if not self.log_file:
             self.log_file = await ft.StoragePaths().get_console_log_filename()
 
-        while not os.path.exists(self.log_file) and self.log_running:
+        while not os.path.exists(self.log_file) and self.console_focused:
             await asyncio.sleep(1)
 
-        if not self.log_running:
+        if not self.console_focused:
             return
 
         with open(self.log_file, "r") as f:
             self.text_field.value = f.read()
             self.text_field.update()
 
-            while self.log_running:
+            while self.console_focused:
                 new_data = f.read()
                 if new_data:
                     self.text_field.value += new_data
@@ -79,17 +79,17 @@ class ConsoleView(GenericView):
         nb_of_files = len(files)
 
         self.progress_bar.value = 0
-        self.progress_bar.update()
+        if self.console_focused: self.progress_bar.update()
 
         for i, file in enumerate(files):
             if self.is_cancelled:
                 self.progress_status.value = "Pipeline cancelled by user"
-                self.progress_status.update()
+                if self.console_focused: self.progress_status.update()
                 error = 0
                 break
 
             self.progress_status.value = f"Processing {i+1}/{nb_of_files} files"
-            self.progress_status.update()
+            if self.console_focused: self.progress_status.update()
             cmd = ffmpeg_cmds[i]
             ffmpeg_process = None
 
@@ -97,7 +97,7 @@ class ConsoleView(GenericView):
             start = time.time_ns()
             frame = 1
             self.frame_progress.value = 0
-            self.frame_progress.update()
+            if self.console_focused: self.frame_progress.update()
             try:
                 for frame_bytes, w ,h in pipeline.stream_pipeline(file["path"]):
                     if self.is_cancelled:
@@ -115,7 +115,7 @@ class ConsoleView(GenericView):
 
                     if frame%100 == 0 or frame == nb_frames:
                         self.frame_progress.value = frame/nb_frames
-                        self.frame_progress.update()
+                        if self.console_focused: self.frame_progress.update()
                     frame += 1
 
                 if ffmpeg_process and not self.is_cancelled:
@@ -135,7 +135,7 @@ class ConsoleView(GenericView):
                     if self.is_cancelled:
                         print(f"💀 Process for {file['name']} was forcefully aborted.")
                         self.progress_status.value = "Pipeline cancelled by user"
-                        self.progress_status.update()
+                        if self.console_focused: self.progress_status.update()
                         error = 1
                         break
 
@@ -148,7 +148,7 @@ class ConsoleView(GenericView):
                         print(f"ℹ️ FFmpeg Error Log:\n{ffmpeg_errors}")
 
                         self.progress_status.value = f"Failed on {file['name']}!"
-                        self.progress_status.update()
+                        if self.console_focused: self.progress_status.update()
                         error = 1
                         break
                 else:
@@ -160,11 +160,17 @@ class ConsoleView(GenericView):
             print(f"ℹ️ Took {round((end - start) / 1e9, 4)} seconds.")
 
             self.progress_bar.value = (i+1)/nb_of_files
-            self.progress_bar.update()
+            if self.console_focused: self.progress_bar.update()
 
         if not error:
             self.progress_status.value = "Done !"
-            self.progress_status.update()
+            if self.console_focused: self.progress_status.update()
+        else:
+            self.progress_bar.value = 1
+            self.frame_progress.value = 0
+            if self.console_focused:
+                self.progress_bar.update()
+                self.frame_progress.update()
 
         pipeline.clean_memory()
 

@@ -174,10 +174,7 @@ class TransformView(GenericView):
         self.transformers.insert(e.new_index, element)
         e.control.update()
 
-    async def build_pipeline(self) -> ModularProcessingPipeline | None:
-        if not self.transformers:
-            return None
-
+    async def build_pipeline(self) -> ModularProcessingPipeline:
         pipeline = ModularProcessingPipeline(
             int(self.pipeline_params.batch_size.value)
         )
