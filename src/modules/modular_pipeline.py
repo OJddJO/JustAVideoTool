@@ -35,38 +35,40 @@ class ModularProcessingPipeline:
             raise ValueError(f"Unable to read input source video file stream targets: {e}")
 
         try:
-            batch: list[np.ndarray[np._AnyShape, np.uint8]] = []
-            for frame in container.decode(video_stream):
+            if self.transformers:
+                batch: list[np.ndarray[np._AnyShape, np.uint8]] = []
+                for frame in container.decode(video_stream):
+                    raw_frame = frame.to_ndarray(format='rgb24').astype(np.uint8)
+                    batch.append(raw_frame)
 
-                # PyAV extracts directly to a numpy array in RGB format mapping
-                raw_frame = frame.to_ndarray(format='rgb24').astype(np.uint8)
-                batch.append(raw_frame)
+                    if len(batch) == self.batch_size:
+                        next_stage_batch = []
+                        for stage in self.transformers:
+                            for frame in batch:
+                                next_stage_batch.extend(stage.transform(frame))
+                            batch = next_stage_batch
 
-                if len(batch) == self.batch_size:
+                        for processed_frame in batch:
+                            h, w, c = processed_frame.shape
+                            yield processed_frame.tobytes(), w, h
+
+                        batch.clear()
+
+                # Process the remaining frames
+                if batch:
                     next_stage_batch = []
                     for stage in self.transformers:
                         for frame in batch:
-                            # Offload compute bounds safely over to concurrent thread pools
                             next_stage_batch.extend(stage.transform(frame))
                         batch = next_stage_batch
 
-                    # Unpack the batch and yield frames sequentially
                     for processed_frame in batch:
                         h, w, c = processed_frame.shape
                         yield processed_frame.tobytes(), w, h
-
-                    batch.clear()
-
-            # Process the remaining frames
-            if batch:
-                next_stage_batch = []
-                for stage in self.transformers:
-                    for frame in batch:
-                        next_stage_batch.extend(stage.transform(frame))
-                    batch = next_stage_batch
-
-                for processed_frame in batch:
-                    h, w, c = processed_frame.shape
-                    yield processed_frame.tobytes(), w, h
+            else:
+                for frame in container.decode(video_stream):
+                    raw_frame = frame.to_ndarray(format='rgb24').astype(np.uint8)
+                    h, w, c = raw_frame.shape
+                    yield raw_frame, w, h
         finally:
             container.close()
