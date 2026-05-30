@@ -10,3 +10,4 @@ torchvision==0.26.0+cu126
 torchaudio==2.11.0+cu126
 nvidia-cuda-runtime-cu12==12.6.77
 nvidia-cudnn-cu12==9.22.0.52
+opencv-python-headless==4.13.0.92

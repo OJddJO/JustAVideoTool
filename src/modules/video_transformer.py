@@ -14,7 +14,7 @@ class VideoTransformer(ABC):
         pass
 
     @abstractmethod
-    def transform(self, frame: np.ndarray) -> list[np.ndarray]:
+    def transform(self, frame: np.ndarray[np._AnyShape, np.uint8]) -> list[np.ndarray[np._AnyShape, np.uint8]]:
         """
         Accepts an interleaved RGB image array of shape (H, W, 3) with range [0, 255].
         Returns a list of processed interleaved RGB array of shape (New_H, New_W, 3).

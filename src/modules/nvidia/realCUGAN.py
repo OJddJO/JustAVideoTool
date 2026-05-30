@@ -32,7 +32,7 @@ class RealCUGAN(VideoTransformer):
         shape_str = f"{self.input_name}:1x3x{dim_h}x{dim_w}"
 
         cache = os.path.join(self.cache_dir, "CUGAN", os.path.basename(self.onnx_model_path), f"{dim_w}x{dim_h}")
-        os.makedirs(cache)
+        os.makedirs(cache, exist_ok=True)
         providers = [
             ('TensorrtExecutionProvider', {
                 'device_id': 0,
@@ -75,7 +75,7 @@ class RealCUGAN(VideoTransformer):
     def get_info(self):
         return (self.scale, self.scale, 1)
 
-    def transform(self, frame: np.ndarray) -> list[np.ndarray]:
+    def transform(self, frame: np.ndarray[np._AnyShape, np.uint8]) -> list[np.ndarray[np._AnyShape, np.uint8]]:
         if not self.session:
             self.init_engine()
 
@@ -86,6 +86,9 @@ class RealCUGAN(VideoTransformer):
 
         # 2. Create an empty blank canvas for the upscaled output on the GPU
         out_frame_t = torch.zeros((H * self.scale, W * self.scale, C), dtype=torch.uint8, device='cuda')
+
+        target_h = self.tile_height + (2 * self.tile_pad)
+        target_w = self.tile_width + (2 * self.tile_pad)
 
         # Loop through the grid using respective height and width
         for y in range(0, H, self.tile_height):
@@ -102,23 +105,18 @@ class RealCUGAN(VideoTransformer):
 
                 # Extract the expanded patch natively on GPU
                 patch = frame_t[y_ext_start:y_ext_end, x_ext_start:x_ext_end, :]
-
-                # Format layout converting: (H, W, C) -> (C, H, W)
-                patch_chw = patch.permute(2, 0, 1)
+                patch = patch.permute(2, 0, 1)
 
                 # Calculate how much synthetic padding is still missing
                 # (due to hitting the very edge of the video frame, or dead space on the right/bottom)
                 pad_top = self.tile_pad - (y - y_ext_start)
                 pad_left = self.tile_pad - (x - x_ext_start)
 
-                target_h = self.tile_height + (2 * self.tile_pad)
-                target_w = self.tile_width + (2 * self.tile_pad)
-
-                pad_bot = target_h - (patch_chw.shape[1] + pad_top)
-                pad_right = target_w - (patch_chw.shape[2] + pad_left)
+                pad_bot = target_h - (patch.shape[1] + pad_top)
+                pad_right = target_w - (patch.shape[2] + pad_left)
 
                 # Fill in the missing boundary/dead space with replication safely
-                padded_patch = F.pad(patch_chw, (pad_left, pad_right, pad_top, pad_bot), mode='replicate')
+                padded_patch = F.pad(patch, (pad_left, pad_right, pad_top, pad_bot), mode='replicate')
 
                 # Normalize and add batch dimension -> (1, C, H, W)
                 input_tensor = (padded_patch.unsqueeze(0).float() / 255.0)
@@ -127,15 +125,12 @@ class RealCUGAN(VideoTransformer):
                 self.gpu_input.copy_(input_tensor, non_blocking=True)
 
                 torch.cuda.synchronize()
-
                 # Execute ONNX Runtime (Reads from VRAM, Writes to VRAM)
                 self.session.run_with_iobinding(self.io_binding)
 
-                # torch.cuda.synchronize()
-
                 # Reconstruct output mapping natively on GPU from the bound output tensor
                 out_patch = self.gpu_output.squeeze(0).permute(1, 2, 0)
-                out_patch = torch.clamp(out_patch * 255.0, 0, 255).byte()
+                out_patch = torch.clamp(out_patch * 255.0, 0, 255).to(torch.uint8)
 
                 # Crop out ONLY the valid region
                 c_y_top = self.tile_pad * self.scale

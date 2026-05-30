@@ -1,11 +1,10 @@
-import asyncio
 import av
 import numpy as np
 
 from modules.video_transformer import VideoTransformer
 
 class ModularProcessingPipeline:
-    def __init__(self, batch_size: int = 32):
+    def __init__(self, batch_size: int = 64):
         self.transformers: list[VideoTransformer] = []
         self.batch_size = batch_size
         print(f"ℹ️ Batch size for frame processing: {self.batch_size}")
@@ -36,11 +35,11 @@ class ModularProcessingPipeline:
             raise ValueError(f"Unable to read input source video file stream targets: {e}")
 
         try:
-            batch: list[np.ndarray] = []
+            batch: list[np.ndarray[np._AnyShape, np.uint8]] = []
             for frame in container.decode(video_stream):
 
                 # PyAV extracts directly to a numpy array in RGB format mapping
-                raw_frame = frame.to_ndarray(format='rgb24')
+                raw_frame = frame.to_ndarray(format='rgb24').astype(np.uint8)
                 batch.append(raw_frame)
 
                 if len(batch) == self.batch_size:

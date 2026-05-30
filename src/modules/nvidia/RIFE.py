@@ -3,6 +3,7 @@ import numpy as np
 import onnxruntime as ort
 import torch
 import torch.nn.functional as F
+import cv2
 from math import exp
 import gc
 
@@ -85,8 +86,10 @@ class RIFE(VideoTransformer):
         self.gpu_output = None
         self.io_binding = None
         self.previous_frame = None
+        self.ssim_prev_frame = None
+        self.prev_frame_t_pad = None
 
-    def init_engine(self, width: int, height: int):
+    def init_engine(self):
         if not os.path.exists(self.onnx_model_path):
             raise FileNotFoundError(f"Model missing: {self.onnx_model_path}")
 
@@ -94,8 +97,8 @@ class RIFE(VideoTransformer):
         self.input_name = temp_session.get_inputs()[0].name
         self.output_name = temp_session.get_outputs()[0].name
 
-        shape_str = f"{self.input_name}:1x11x{height}x{width}"
-        cache = os.path.join(self.cache_dir, "RIFE", os.path.basename(self.onnx_model_path), f"{width}x{height}")
+        shape_str = f"{self.input_name}:1x11x{self.padded_height}x{self.padded_width}"
+        cache = os.path.join(self.cache_dir, "RIFE", os.path.basename(self.onnx_model_path), f"{self.padded_width}x{self.padded_height}")
         os.makedirs(cache, exist_ok=True)
         providers = [
             ('TensorrtExecutionProvider', {
@@ -114,8 +117,8 @@ class RIFE(VideoTransformer):
 
         self.session = ort.InferenceSession(self.onnx_model_path, providers=providers)
 
-        in_io_shape = (1, 11, height, width)
-        out_io_shape = (1, 3, height, width)
+        in_io_shape = (1, 11, self.padded_height, self.padded_width)
+        out_io_shape = (1, 3, self.padded_height, self.padded_width)
 
         self.gpu_input = torch.empty(in_io_shape, dtype=torch.float32, device='cuda').contiguous()
         self.gpu_output = torch.empty(out_io_shape, dtype=torch.float32, device='cuda').contiguous()
@@ -132,67 +135,70 @@ class RIFE(VideoTransformer):
         self.input_name = self.session.get_inputs()[0].name
         self.output_name = self.session.get_outputs()[0].name
 
-        self.timestep = torch.full((1, 1, height, width), 0.5, dtype=torch.float32, device='cuda')
+        self.timestep = torch.full((1, 1, self.padded_height, self.padded_width), 0.5, dtype=torch.float32, device='cuda')
 
-        x_indices = np.arange(width, dtype=np.float32)
-        y_indices = np.arange(height, dtype=np.float32)
+        x_indices = np.arange(self.padded_width, dtype=np.float32)
+        y_indices = np.arange(self.padded_height, dtype=np.float32)
         gx, gy = np.meshgrid(x_indices, y_indices)
 
-        gx = 2.0 * gx / (width - 1) - 1.0
-        gy = 2.0 * gy / (height - 1) - 1.0
+        gx = 2.0 * gx / (self.padded_width - 1) - 1.0
+        gy = 2.0 * gy / (self.padded_height - 1) - 1.0
 
-        self.grid_x = torch.from_numpy(gx).cuda().unsqueeze(0).unsqueeze(0)
-        self.grid_y = torch.from_numpy(gy).cuda().unsqueeze(0).unsqueeze(0)
+        self.grid_x = torch.from_numpy(gx).cuda(non_blocking=True).unsqueeze(0).unsqueeze(0)
+        self.grid_y = torch.from_numpy(gy).cuda(non_blocking=True).unsqueeze(0).unsqueeze(0)
 
-        mx = np.full((height, width), 2.0 / (width - 1), dtype=np.float32)
-        my = np.full((height, width), 2.0 / (height - 1), dtype=np.float32)
+        mx = np.full((self.padded_height, self.padded_width), 2.0 / (self.padded_width - 1), dtype=np.float32)
+        my = np.full((self.padded_height, self.padded_width), 2.0 / (self.padded_height - 1), dtype=np.float32)
 
-        self.mult_x = torch.from_numpy(mx).cuda().unsqueeze(0).unsqueeze(0)
-        self.mult_y = torch.from_numpy(my).cuda().unsqueeze(0).unsqueeze(0)
+        self.mult_x = torch.from_numpy(mx).cuda(non_blocking=True).unsqueeze(0).unsqueeze(0)
+        self.mult_y = torch.from_numpy(my).cuda(non_blocking=True).unsqueeze(0).unsqueeze(0)
 
         print("✅ RIFE ready!")
 
     def get_info(self):
         return (1, 1, 2)
 
-    def transform(self, current_frame: np.ndarray) -> list[np.ndarray]:
+    def transform(self, current_frame: np.ndarray[np._AnyShape, np.uint8]) -> list[np.ndarray[np._AnyShape, np.uint8]]:
         h, w, _ = current_frame.shape
-
-        padded_height = ((h - 1) // 128 + 1) * 128
-        padded_width = ((w - 1) // 128 + 1) * 128
-        padding = (0, padded_width - w, 0, padded_height - h)
         if not self.session:
-            self.init_engine(padded_width, padded_height)
+            self.padded_height = ((h - 1) // 128 + 1) * 128
+            self.padded_width = ((w - 1) // 128 + 1) * 128
+            self.padding = (0, self.padded_width - w, 0, self.padded_height - h)
+            self.init_engine()
 
-        cur_frame_t = torch.from_numpy(current_frame).to('cuda').permute(2, 0, 1).unsqueeze(0).float() / 255.0
+        cur_frame_t = torch.from_numpy(current_frame).to('cuda', non_blocking=True).permute(2, 0, 1).unsqueeze(0).float() / 255.0
+        cur_small_np = cv2.resize(current_frame, (32, 32), interpolation=cv2.INTER_LINEAR)
+        ssim_cur_frame = torch.from_numpy(np.transpose(cur_small_np, (2, 0, 1))).unsqueeze(0).float() / 255.0
+        cur_frame_t_pad = F.pad(cur_frame_t, self.padding, mode="replicate")
 
         # First frame, can't generate frame from nothing
         if self.previous_frame is None:
             self.previous_frame = cur_frame_t
+            self.ssim_prev_frame = ssim_cur_frame
+            self.prev_frame_t_pad = cur_frame_t_pad
             return [current_frame]
 
-        ssim_prev_frame = F.interpolate(self.previous_frame, (32, 32), mode="bilinear", align_corners=False)
-        ssim_cur_frame = F.interpolate(cur_frame_t, (32, 32), mode="bilinear", align_corners=False)
-        ssim = ssim_matlab(ssim_prev_frame[:, :3], ssim_cur_frame[:, :3])
-
+        ssim = ssim_matlab(self.ssim_prev_frame[:, :3], ssim_cur_frame[:, :3])
         if ssim < 0.05 or ssim > 0.996:
             self.previous_frame = cur_frame_t
-            return [current_frame.copy(), current_frame]
+            self.ssim_prev_frame = ssim_cur_frame
+            self.prev_frame_t_pad = cur_frame_t_pad
+            return [current_frame, current_frame]
 
-        prev_frame_t_pad = F.pad(self.previous_frame, padding, mode="replicate")
-        cur_frame_t_pad = F.pad(cur_frame_t, padding, mode="replicate")
-        bundled = torch.cat((prev_frame_t_pad, cur_frame_t_pad, self.timestep, self.grid_x, self.grid_y, self.mult_x, self.mult_y), 1).contiguous()
+        torch.cat(
+            (self.prev_frame_t_pad, cur_frame_t_pad, self.timestep, self.grid_x, self.grid_y, self.mult_x, self.mult_y),
+            1,
+            out=self.gpu_input
+        )
 
-        self.gpu_input.copy_(bundled, non_blocking=True)
-
-        torch.cuda.synchronize()
         self.session.run_with_iobinding(self.io_binding)
-        # torch.cuda.synchronize()
 
         output_tensor = self.gpu_output
         final_frame_tensor = output_tensor[:, :, :h, :w]
-        final_frame_np = (final_frame_tensor.squeeze(0).permute(1, 2, 0).clamp(0, 1) * 255).byte().cpu().numpy()
+        final_frame_np = (final_frame_tensor.squeeze(0).permute(1, 2, 0).clamp(0, 1) * 255).to(torch.uint8).cpu().numpy()
         self.previous_frame = cur_frame_t
+        self.ssim_prev_frame = ssim_cur_frame
+        self.prev_frame_t_pad = cur_frame_t_pad
 
         return [final_frame_np, current_frame]
 
