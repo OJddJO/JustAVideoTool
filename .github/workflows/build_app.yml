@@ -68,6 +68,17 @@ jobs:
         7z x "src/assets/models.v15.16.7z" -o"src/assets/" -y
         Remove-Item -Path "src/assets/models.v15.16.7z" -Force
 
+    - name: Include License in Build Output
+      shell: powershell
+      run: |
+        # Checks if the LICENSE file exists in your repo root before copying to avoid errors
+        if (Test-Path "LICENSE") {
+            Copy-Item -Path "LICENSE" -Destination "build/windows/" -Force
+            echo "Successfully bundled LICENSE into the build folder!"
+        } else {
+            echo "Warning: LICENSE file not found in repository root."
+        }
+
     - name: Package Application Executable
       run: |
         flet build windows -v
