@@ -18,6 +18,16 @@ The main goal is to make an app for video alterations using AI with `.onnx` mode
 - ⬛ Non-Nvidia GPU support
 - ⬛ Linux support (should be natif, but NixOS have some problems with dependencies)
 
+## Requirements
+- an NVidia gpu
+- [ffmpeg](https://ffmpeg.org/) installed and added to the **PATH**
+
+## Installation
+- Go to the releases
+- Download
+- Extract with all the files in the **SAME** folder
+- Enjoy
+
 ## Implemented Transformer
 ### Upscaling
 - RealESRGAN
@@ -31,6 +41,7 @@ The main goal is to make an app for video alterations using AI with `.onnx` mode
 - [PyTorch](https://pytorch.org/): a widely used Python deep learning library
 - [numpy](https://numpy.org/): a well-known Python library for multi-dimensionnal arrays/matrices computing
 - [ONNX runtime](https://onnxruntime.ai/): a performance-focused AI engine for `.onnx` models
+- [PyAV](https://github.com/PyAV-Org/PyAV): a fast Python FFmpeg binding
 
 ## AI Models Used
 All AI models are from this beautiful [repository](https://github.com/AmusementClub/vs-mlrt). Thanks to AmusementClub !
