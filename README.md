@@ -19,7 +19,7 @@ The main goal is to make an app for video alterations using AI with `.onnx` mode
 - ⬛ Linux support (should be natif, but NixOS have some problems with dependencies)
 
 ## Requirements
-- an NVidia gpu
+- an Nvidia gpu
 - [ffmpeg](https://ffmpeg.org/) installed and added to the **PATH**
 
 ## Installation
