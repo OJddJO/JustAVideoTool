@@ -3,7 +3,7 @@
 
 <div align="center">
   <img src="src/assets/icon.svg" width="200" alt="logo">
-  <h1>Just A Video Tool</h1>
+  <h3>Just A Video Tool</h3>
   <p>A simple tool for video manipulations, such as encoding, downscaling, upscaling, frame interpolation, ...</p>
 </div>
 
