@@ -6,7 +6,7 @@ from modules.video_transformer import VideoTransformer
 
 class ModularProcessingPipeline:
     def __init__(self):
-        print(f"ℹ️ Initializing pipeline")
+        print(f"Initializing pipeline")
         self.transformers: list[VideoTransformer] = []
         self.width_factor = 1
         self.height_factor = 1
@@ -15,7 +15,7 @@ class ModularProcessingPipeline:
     def add_stage(self, transformer: VideoTransformer):
         """Appends a new transformer block stage to the processing assembly line."""
         self.transformers.append(transformer)
-        print(f"➕ Added {str(transformer)}")
+        print(f"Added {str(transformer)}")
         wf, hf, fgf = transformer.get_info()
         self.width_factor *= wf
         self.height_factor *= hf

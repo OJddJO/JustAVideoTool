@@ -94,10 +94,10 @@ class VideoTool:
         enc = self.encode.get_params()
 
         if len(files) == 0:
-            print("⚠️ No file selected")
+            print("No file selected")
             return
 
-        print("\nℹ️ Setting up pipeline...")
+        print("\nSetting up pipeline...")
 
         self.run_button.disabled = True
         self.run_button.update()
@@ -112,7 +112,7 @@ class VideoTool:
                     break
 
             if video_stream is None:
-                print(f"⚠️ File {file["name"]} ({file["path"]}) doesn't have video stream. Skipped")
+                print(f"File {file["name"]} ({file["path"]}) doesn't have video stream. Skipped")
                 continue
 
             width = video_stream["width"] * pipeline.width_factor
@@ -181,7 +181,7 @@ class VideoTool:
 
         async def window_close_cleanup(e: ft.WindowEvent):
             if e.type == ft.WindowEventType.CLOSE:
-                print("ℹ️ Exiting app, cleaning pipeline...")
+                print("Exiting app, cleaning pipeline...")
                 self.console.cancel_pipeline()
                 while self.pipeline_thread.is_alive():
                     await asyncio.sleep(0.1)
@@ -191,7 +191,7 @@ class VideoTool:
         self.page.window.on_event = window_close_cleanup
         self.page.update()
 
-        print("✅ Pipeline setup done !")
+        print("Pipeline setup done !")
         # ------------------------
 
         self.run_button.visible = False
@@ -223,4 +223,4 @@ class VideoTool:
 
 if __name__ == "__main__":
     app = VideoTool()
-    ft.run(app.main)
+    ft.run(app.main, assets_dir="assets")

@@ -3,10 +3,8 @@ import numpy as np
 import onnxruntime as ort
 import torch
 import torch.nn.functional as F
-import cv2
 from math import exp
 import gc
-from typing import Any
 
 from modules.video_transformer import VideoTransformer
 
@@ -114,7 +112,7 @@ class RIFE(VideoTransformer):
             }),
             ('CUDAExecutionProvider', {'device_id': 0}),
         ]
-        print("⏳ Initializing RIFE... (Compilation may take time if using TensorRT and will freeze the GUI)")
+        print("Initializing RIFE... (Compilation may take time if using TensorRT and will freeze the GUI)")
 
         self.session = ort.InferenceSession(self.onnx_model_path, providers=providers)
 
@@ -154,7 +152,7 @@ class RIFE(VideoTransformer):
         self.mult_x = torch.from_numpy(mx).cuda(non_blocking=True).unsqueeze(0).unsqueeze(0).contiguous()
         self.mult_y = torch.from_numpy(my).cuda(non_blocking=True).unsqueeze(0).unsqueeze(0).contiguous()
 
-        print("✅ RIFE ready!")
+        print("RIFE ready!")
 
     def get_info(self):
         return (1, 1, 2)
@@ -218,7 +216,7 @@ class RIFE(VideoTransformer):
             torch.cuda.empty_cache()
             torch.cuda.ipc_collect()
 
-        print("🧹 RIFE memory released.")
+        print("RIFE memory released.")
 
     def __str__(self):
         return f"RIFE(onnx_model_path={self.onnx_model_path}, cache_dir={self.cache_dir})"

@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       version_tag:
-        description: 'Release Version Tag (e.g., 1.0.0-pre1)'
+        description: 'Release Version Tag (e.g., 1.0.0)'
         required: true
-        default: '1.0.0-pre1'
+        default: '1.0.0'
       release_name:
         description: 'Release Title Name'
         required: false
-        default: 'Unstable Release'
+        default: 'Release'
 
 jobs:
   build-windows:
@@ -37,7 +37,6 @@ jobs:
     - name: Install C++ Workload Dependencies
       shell: powershell
       run: |
-        # Use Chocolatey to grab the MSVC backend compiler, Windows SDK, and CMake
         choco install visualstudio2022buildtools --package-parameters "--add Microsoft.VisualStudio.Workload.VCTools --add Microsoft.VisualStudio.Component.Windows11SDK.22000 --includeRecommended --passive --norestart" -y
 
     - name: Install Flutter SDK
@@ -55,33 +54,56 @@ jobs:
     - name: Install Flet CLI Tools
       run: pip install "flet[cli]"
 
+    - name: Download Pre-trained Models from Release
+      shell: powershell
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        New-Item -ItemType Directory -Force -Path "src/assets"
+        gh release download --repo AmusementClub/vs-mlrt --pattern "models.v15.16.7z" --dir src/assets
+
+    - name: Extract Models into Assets Folder
+      shell: powershell
+      run: |
+        7z x "src/assets/models.v15.16.7z" -o"src/assets/" -y
+        Remove-Item -Path "src/assets/models.v15.16.7z" -Force
+
     - name: Package Application Executable
       run: |
-        # Compiles Python files and bundles assets using your pyproject.toml configuration
-        flet build windows
+        flet build windows -v
+
+    - name: Compress Build Into Multi-Part Volumes
+      shell: powershell
+      run: |
+        # -v2g splits the file into 2 Gigabyte pieces (.zip.001, .zip.002...)
+        # -y automatically answers yes to prompts
+        7z a -v2g Just-A-Video-Tool-Windows.zip .\build\windows\* -y
 
     - name: Upload Build Artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: Just-A-Video-Tool-Windows
         path: build/windows/
         if-no-files-found: error
-        retention-days: 7
+        retention-days: 90
 
-    - name: Compress Build Artifacts for Release
-      shell: powershell
-      run: |
-        # Compress the output folder to a neat .zip file for users to download easily
-        Compress-Archive -Path "build/windows/*" -DestinationPath "Just-A-Video-Tool-Windows.zip" -Force
-
-    - name: Create GitHub Release and Upload Asset
+    - name: Create GitHub Release and Upload Split Assets
       uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ github.event.inputs.version_tag }}
         name: "${{ github.event.inputs.release_name }} (${{ github.event.inputs.version_tag }})"
         draft: true
         prerelease: true
-        # Points directly to the compressed ZIP folder containing your build artifact asset
-        files: Just-A-Video-Tool-Windows.zip
+        files: |
+          Just-A-Video-Tool-Windows.zip.*
+        body: |
+          ### 📦 Application Installation Instructions (Multi-Part Download)
+
+          Because this standalone package bundles local TensorRT and CUDA runtimes (~5GB) and AI models (~1GB), it has been split into 2GB volumes to satisfy server limits.
+
+          **How to install:**
+          1. Download **all** attached file parts below (`.zip.001`, `.zip.002`, etc.) into the exact same folder on your PC.
+          2. Right-click the **first** file (`Just-A-Video-Tool-Windows.zip.001`).
+          3. Select **7-Zip** or **WinRAR** -> **Extract Here**. The software will automatically merge all parts and extract the full unified application!
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

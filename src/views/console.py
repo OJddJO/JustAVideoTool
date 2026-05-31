@@ -94,7 +94,7 @@ class ConsoleView(GenericView):
             cmd = ffmpeg_cmds[i]
             ffmpeg_process = None
 
-            print(f"▶️ Running the pipeline on {file['name']} ({file['path']})")
+            print(f"Running the pipeline on {file['name']} ({file['path']})")
             start = time.time_ns()
             frame = 1
             self.frame_progress.value = 0
@@ -102,7 +102,7 @@ class ConsoleView(GenericView):
             try:
                 for frame_bytes in pipeline.stream_pipeline(file["path"]):
                     if self.is_cancelled:
-                        print("🛑 Cancellation detected! Terminating FFmpeg...")
+                        print("Cancellation detected! Terminating FFmpeg...")
                         if ffmpeg_process: ffmpeg_process.terminate()  # Instantly kills the FFmpeg process safely
                         break
 
@@ -120,7 +120,7 @@ class ConsoleView(GenericView):
                     frame += 1
 
                 if ffmpeg_process and not self.is_cancelled:
-                    print("🔄️ Closing FFmpeg pipe and finalizing video container...")
+                    print("Closing FFmpeg pipe and finalizing video container...")
                     ffmpeg_process.stdin.close()
                     while not ffmpeg_process.stdin.closed:
                         time.sleep(0.1)
@@ -135,7 +135,7 @@ class ConsoleView(GenericView):
                 if ffmpeg_process:
                     return_code = ffmpeg_process.wait()
                     if self.is_cancelled:
-                        print(f"💀 Process for {file['name']} was forcefully aborted.")
+                        print(f"Process for {file['name']} was forcefully aborted.")
                         self.progress_status.value = "Pipeline cancelled by user"
                         if self.console_focused: self.progress_status.update()
                         error = 1
@@ -146,8 +146,8 @@ class ConsoleView(GenericView):
                     if return_code != 0:
                         stderr_bytes = ffmpeg_process.stderr.read()
                         ffmpeg_errors = stderr_bytes.decode().strip()
-                        print(f"❌ FFmpeg failed with exitcode {return_code} on {file['name']}")
-                        print(f"ℹ️ FFmpeg Error Log:\n{ffmpeg_errors}")
+                        print(f"FFmpeg failed with exitcode {return_code} on {file['name']}")
+                        print(f"FFmpeg Error Log:\n{ffmpeg_errors}")
 
                         self.progress_status.value = f"Failed on {file['name']}!"
                         if self.console_focused: self.progress_status.update()
@@ -158,8 +158,8 @@ class ConsoleView(GenericView):
                     error = 1
                     break
 
-            print(f"✅ Video {file['name']} process complete!")
-            print(f"ℹ️ Took {round((end - start) / 1e9, 4)} seconds.")
+            print(f"Video {file['name']} process complete!")
+            print(f"Took {round((end - start) / 1e9, 4)} seconds.")
 
             self.progress_bar.value = (i+1)/nb_of_files
             if self.console_focused: self.progress_bar.update()

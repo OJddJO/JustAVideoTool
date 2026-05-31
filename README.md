@@ -2,7 +2,7 @@
 A simple tool for video manipulations, such as encoding, downscaling, upscaling, frame interpolation, ...
 
 > [!NOTE]
-> This app is still in developpment. 
+> This app is still in developpment.
 > First release will be soon... Be patient :)
 
 ## Goals

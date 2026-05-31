@@ -295,7 +295,7 @@ class FileField(GenericContainer):
 
     async def remove_from_container(self):
         self.container.remove(self)
-        print(f"➖ Removed {self.filename} ({self.filepath}) from selection")
+        print(f"Removed {self.filename} ({self.filepath}) from selection")
 
     def get_file_attr(self) -> dict:
         return {
@@ -348,7 +348,7 @@ class InputView(GenericView):
     async def handle_clear_selection(self, e: ft.Event[ft.Button]):
         self.picked_file.clear()
         self.file_container.update()
-        print("ℹ️ Cleared input selection")
+        print("Cleared input selection")
         self.page.pop_dialog()
 
     async def handle_file_selection(self, e: ft.Event[ft.Button]):
@@ -379,7 +379,7 @@ class InputView(GenericView):
                 print(f"❌ Failed to parse metadata for {file.name} ({file.path}): {error}")
 
             self.picked_file.append(FileField(self.picked_file, file, metadata))
-            print(f"➕ Added {file.name} ({file.path}) to selection")
+            print(f"Added {file.name} ({file.path}) to selection")
             self.file_container.update()
 
         self.loading_ring.visible = False

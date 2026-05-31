@@ -4,7 +4,6 @@ import onnxruntime as ort
 import torch
 import torch.nn.functional as F
 import gc
-from typing import Any
 
 from modules.video_transformer import VideoTransformer
 
@@ -50,7 +49,7 @@ class RealCUGAN(VideoTransformer):
             }),
             ('CUDAExecutionProvider', {'device_id': 0}),
         ]
-        print("⏳ Initializing RealCUGAN... (Compilation may take time if using TensorRT and will freeze the GUI)")
+        print("Initializing RealCUGAN... (Compilation may take time if using TensorRT and will freeze the GUI)")
         self.session = ort.InferenceSession(self.onnx_model_path, providers=providers)
 
         io_in_shape = (1, 3, dim_h, dim_w)
@@ -74,7 +73,7 @@ class RealCUGAN(VideoTransformer):
         self.input_name = self.session.get_inputs()[0].name
         self.output_name = self.session.get_outputs()[0].name
 
-        print("✅ RealCUGAN ready!")
+        print("RealCUGAN ready!")
 
     def transform(self, frame: torch.Tensor) -> list[torch.Tensor]:
         if not self.session:
@@ -149,7 +148,7 @@ class RealCUGAN(VideoTransformer):
             torch.cuda.empty_cache()
             torch.cuda.ipc_collect()
 
-        print("🧹 RealCUGAN memory released.")
+        print("RealCUGAN memory released.")
 
     def __str__(self):
         return f"RealCUGAN(onnx_model_path={self.onnx_model_path}, cache_dir={self.cache_dir}, tile_width={self.tile_width}, tile_height={self.tile_height}, tile_pad={self.tile_pad}, scale={self.scale})"

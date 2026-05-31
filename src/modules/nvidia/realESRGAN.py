@@ -4,7 +4,6 @@ import onnxruntime as ort
 import torch
 import torch.nn.functional as F
 import gc
-from typing import Any
 
 from modules.video_transformer import VideoTransformer
 
@@ -51,7 +50,7 @@ class RealESRGAN(VideoTransformer):
             }),
             ('CUDAExecutionProvider', {'device_id': 0}),
         ]
-        print("⏳ Initializing RealESRGAN... (Compilation may take time if using TensorRT and will freeze the GUI)")
+        print("Initializing RealESRGAN... (Compilation may take time if using TensorRT and will freeze the GUI)")
         self.session = ort.InferenceSession(self.onnx_model_path, providers=providers)
 
         io_in_shape = (1, 3, dim_h, dim_w)
@@ -75,7 +74,7 @@ class RealESRGAN(VideoTransformer):
         self.input_name = self.session.get_inputs()[0].name
         self.output_name = self.session.get_outputs()[0].name
 
-        print("✅ RealESRGAN ready!")
+        print("RealESRGAN ready!")
 
     def get_info(self):
         return (self.scale, self.scale, 1)
@@ -152,7 +151,7 @@ class RealESRGAN(VideoTransformer):
             torch.cuda.empty_cache()
             torch.cuda.ipc_collect()
 
-        print("🧹 RealESRGAN memory released.")
+        print("RealESRGAN memory released.")
 
     def __str__(self):
         return f"RealESRGAN(onnx_model_path={self.onnx_model_path}, cache_dir={self.cache_dir}, tile_width={self.tile_width}, tile_height={self.tile_height}, tile_pad={self.tile_pad}, scale={self.scale})"

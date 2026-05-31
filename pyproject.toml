@@ -1,3 +1,6 @@
+[project]
+name = "just_a_video_tool"
+
 [tool.flet.app]
 path = "src"
 module = "main.py"

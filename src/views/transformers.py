@@ -1,6 +1,7 @@
 import flet as ft
 from views.generic import GenericContainer, TextField, NumberInput
 
+from modules.assets_dir import assets_dir
 from modules.video_transformer import VideoTransformer
 from modules.nvidia import *
 
@@ -101,7 +102,7 @@ ESRGAN (Enhanced Super-Resolution GAN): Optimized for real-world photos and real
         super().__init__(
             container=container,
             title=[ft.Icon(ft.Icons.IMAGE_ASPECT_RATIO), ft.Text("RealESRGAN", size=20, weight=ft.FontWeight.BOLD, expand=True)],
-            default_onnx="models/RealESRGANv2/RealESRGANv2-animevideo-xsx2.onnx",
+            default_onnx=str(assets_dir / "models" / "RealESRGANv2" / "RealESRGANv2-animevideo-xsx2.onnx"),
             content=[
                 ft.Divider(),
                 ft.Row([
@@ -148,7 +149,7 @@ CUGAN (Cascaded-U-Net GAN): Specifically optimized for Anime, Manga, and Cartoon
         super().__init__(
             container,
             title = [ft.Icon(ft.Icons.IMAGE_ASPECT_RATIO), ft.Text("RealESRGAN", size=20, weight=ft.FontWeight.BOLD, expand=True)],
-            default_onnx="models/cugan/pro-conservative-up2x.onnx",
+            default_onnx=str(assets_dir / "models" / "cugan" / "pro-conservative-up2x.onnx"),
             content=[
                 ft.Divider(),
                 ft.Row([
@@ -191,7 +192,7 @@ It excels at creating smooth slow-motion effects and increasing frame rates by p
         super().__init__(
             container,
             title=[ft.Icon(ft.Icons.SLOW_MOTION_VIDEO_OUTLINED), ft.Text("RIFE", size=20, weight=ft.FontWeight.BOLD, expand=True)],
-            default_onnx="models/rife/rife_v4.10.onnx"
+            default_onnx=str(assets_dir / "models" / "rife" / "rife_v4.10.onnx")
         )
 
     async def build_transformer(self):
