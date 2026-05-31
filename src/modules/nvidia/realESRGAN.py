@@ -24,6 +24,7 @@ class RealESRGAN(VideoTransformer):
         self.io_binding = None
 
     def init_engine(self):
+        print("Initializing RealESRGAN... (Compilation may take time if using TensorRT and will freeze the GUI)", flush=True)
         if not os.path.exists(self.onnx_model_path):
             raise FileNotFoundError(f"Model missing: {self.onnx_model_path}")
 
@@ -50,7 +51,6 @@ class RealESRGAN(VideoTransformer):
             }),
             ('CUDAExecutionProvider', {'device_id': 0}),
         ]
-        print("Initializing RealESRGAN... (Compilation may take time if using TensorRT and will freeze the GUI)")
         self.session = ort.InferenceSession(self.onnx_model_path, providers=providers)
 
         io_in_shape = (1, 3, dim_h, dim_w)
