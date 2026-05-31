@@ -10,9 +10,9 @@
 ## Goals
 The main goal is to make an app for video alterations using AI with `.onnx` models (such as `RealCUGAN`, `RealESRGAN`, `Waifu2x`, `RIFE`, ...) and `Nvidia`'s acceleration technologies (CUDA/TensorRT) in a modular pipelining approach. It would also encode the final result using [ffmpeg](https://ffmpeg.org/) with [AV1](https://aomedia.org/specifications/av1/) codec.
 
-- [x] FINISHING THE APP
-- [ ] Non-Nvidia GPU support
-- [ ] Linux support (should be natif, but NixOS have some problems with dependencies)
+- ✅ FINISHING THE APP
+- ⬛ Non-Nvidia GPU support
+- ⬛ Linux support (should be natif, but NixOS have some problems with dependencies)
 
 ## Implemented Transformer
 ### Upscaling
