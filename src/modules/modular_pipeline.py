@@ -53,7 +53,7 @@ class ModularProcessingPipeline:
                         gpu_frames = new_gpu_frames
 
                     for gpu_frame in gpu_frames:
-                        processed_frame = (gpu_frame.squeeze(0).permute(1, 2, 0) * 255.0).to(torch.uint8).contiguous().cpu().numpy()
+                        processed_frame = (gpu_frame.squeeze(0).permute(1, 2, 0) * 255.0).to(torch.uint8).cpu().numpy()
                         yield processed_frame
             else:
                 for frame in container.decode(video_stream):

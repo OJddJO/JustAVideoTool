@@ -1,6 +1,6 @@
 import flet as ft
 from types import MethodType
-from views.generic import GenericContainer, GenericView, GenericOverlay, NumberInput
+from views.generic import GenericContainer, GenericView, GenericOverlay, ViewTitle
 from views.transformers import *
 from modules.modular_pipeline import ModularProcessingPipeline
 
@@ -17,6 +17,13 @@ TransformersDictType = dict[
 ]
 
 transformers: TransformersDictType = {
+    "Frame interpolators": {
+        "desc": "Generates intermediate frames to increase video frame rate and create smoother motion.",
+        "icon": ft.Icons.SLOW_MOTION_VIDEO_OUTLINED,
+        "tr": {
+            "RIFE": RIFE_Layer,
+        }
+    },
     "Upscalers": {
         "desc": "Increases frame resolution to produce sharp, high-definition output",
         "icon": ft.Icons.IMAGE_ASPECT_RATIO,
@@ -25,11 +32,14 @@ transformers: TransformersDictType = {
             "RealCUGAN": RealCUGAN_Layer,
         }
     },
-    "Frame interpolators": {
-        "desc": "Generates intermediate frames to increase video frame rate and create smoother motion.",
-        "icon": ft.Icons.SLOW_MOTION_VIDEO_OUTLINED,
+    "Downscalers": {
+        "desc": "Reduces frame resolution to smaller sizes for faster processing, lower file size, or target-output compatibility.",
+        "icon": ft.Icons.COMPRESS_OUTLINED,
         "tr": {
-            "RIFE": RIFE_Layer,
+            "Bilinear": Bilinear_Layer,
+            "Bicubic": Bicubic_Layer,
+            "Lanczos": Lanczos_Layer,
+            "InterArea": InterArea_Layer
         }
     }
 }
@@ -124,7 +134,7 @@ class TransformView(GenericView):
         self.overlay = [GenericOverlay(self.selector_view)]
         self.content = ft.Column(
             [
-                ft.Text("Transform", size=28, weight=ft.FontWeight.BOLD),
+                ViewTitle("Transform"),
                 ft.ReorderableListView(
                     expand=True,
                     show_default_drag_handles=False,

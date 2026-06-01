@@ -25,17 +25,18 @@ import av
 import numpy as np
 import time
 from modules.modular_pipeline import ModularProcessingPipeline
-from modules.nvidia.realCUGAN import RealCUGAN
-from modules.nvidia.realESRGAN import RealESRGAN
-from modules.nvidia.RIFE import RIFE
+from modules.t import *
 
 def run_test():
     pipeline = ModularProcessingPipeline()
 
-    tr1 = RealCUGAN(onnx_model_path="../models/cugan/pro-conservative-up2x.onnx", tile_width=960, tile_height=540, tile_pad=32)
-    pipeline.add_stage(tr1)
-    tr2 = RIFE(onnx_model_path="../models/rife/rife_v4.10.onnx")
-    pipeline.add_stage(tr2)
+    # tr1 = RealCUGAN(onnx_model_path="../models/cugan/pro-conservative-up2x.onnx", tile_width=960, tile_height=540, tile_pad=32)
+    # pipeline.add_stage(tr1)
+    # tr2 = RIFE(onnx_model_path="../models/rife/rife_v4.10.onnx")
+    # pipeline.add_stage(tr2)
+
+    tr = InterArea()
+    pipeline.add_stage(tr)
 
     # Note: Replace 'sample.mov' with an actual short video path
     input_video = "sample.mkv"

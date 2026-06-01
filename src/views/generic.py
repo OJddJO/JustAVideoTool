@@ -42,6 +42,14 @@ class ViewTitle(ft.Text):
         self.weight = ft.FontWeight.BOLD
 
 @ft.control
+class Subtitle(ft.Text):
+    def __init__(self, title: str, *args, **kwargs):
+        super().__init__(title, *args, **kwargs)
+        self.size = 20
+        self.weight = ft.FontWeight.BOLD
+        self.expand = True
+
+@ft.control
 class TextField(ft.TextField):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

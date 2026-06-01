@@ -1,15 +1,19 @@
 import flet as ft
-from views.generic import GenericContainer, TextField, NumberInput
+from views.generic import GenericContainer, TextField, NumberInput, Subtitle, Label
 
 from modules.assets_dir import assets_dir
 from modules.video_transformer import VideoTransformer
-from modules.nvidia import *
+from modules.t import *
 
 __all__ = [
     "TransformerLayer",
     "RealESRGAN_Layer",
     "RealCUGAN_Layer",
-    "RIFE_Layer"
+    "RIFE_Layer",
+    "Bilinear_Layer",
+    "Bicubic_Layer",
+    "Lanczos_Layer",
+    "InterArea_Layer",
 ]
 
 @ft.control
@@ -17,7 +21,7 @@ class TransformerLayer(GenericContainer):
     """Prototype class for all transformer UI layers"""
     desc = ""
 
-    def __init__(self, container: list["TransformerLayer"], title: list[ft.Control], default_onnx = "", content: list = [], advanced_settings: list = []):
+    def __init__(self, container: list["TransformerLayer"], title: list[ft.Control], default_onnx: str | None = None, content: list = [], advanced_settings: list = [], cache = True):
         super().__init__()
         self.container = container
         self.file_picker = ft.FilePicker()
@@ -35,12 +39,14 @@ class TransformerLayer(GenericContainer):
                             ft.Button("Remove", icon=ft.Icons.REMOVE, icon_color=ft.Colors.RED_300, color=ft.Colors.RED_300, on_click=self.remove)
                         ]),
                         ft.Divider(),
+                    ]
+                    + ([
                         ft.Row([
-                            ft.Text("Model Path", size=16, weight=ft.FontWeight.BOLD),
+                            Label("Model Path"),
                             self.onnx_model_path,
                             ft.Button("Select ONNX", icon=ft.Icons.FOLDER_OPEN_OUTLINED, on_click=self.select_onnx)
                         ], expand=True)
-                    ]
+                    ] if default_onnx else [])
                     + content
                     + ([
                         ft.Divider(),
@@ -49,18 +55,18 @@ class TransformerLayer(GenericContainer):
                             leading=ft.Icon(ft.Icons.SETTINGS_OUTLINED, size=18),
                             controls=ft.Column([
                                 ft.Row([
-                                    ft.Text("Cache directory", size=16, weight=ft.FontWeight.BOLD),
+                                    Label("Cache directory"),
                                     self.cache_dir,
                                     ft.Button("Choose directory", icon=ft.Icons.FOLDER_OPEN_OUTLINED, on_click=self.choose_cache_dir)
                                 ],expand=True)
-                            ] + advanced_settings),
+                            ] if cache else [] + advanced_settings),
                             dense=True,
                             expanded=False,
                             shape=ft.RoundedRectangleBorder(radius=0),
                             collapsed_shape=ft.RoundedRectangleBorder(radius=0),
                             controls_padding=ft.Padding(top=10),
                         )
-                    ]),
+                    ] if advanced_settings or cache else []),
                     expand=True,
                     margin=5
                 )
@@ -101,12 +107,12 @@ ESRGAN (Enhanced Super-Resolution GAN): Optimized for real-world photos and real
         self.cache_dir = TextField(label="Cache path", expand=True, value="cache")
         super().__init__(
             container=container,
-            title=[ft.Icon(ft.Icons.IMAGE_ASPECT_RATIO), ft.Text("RealESRGAN", size=20, weight=ft.FontWeight.BOLD, expand=True)],
+            title=[ft.Icon(ft.Icons.IMAGE_ASPECT_RATIO), Subtitle("RealESRGAN")],
             default_onnx=str(assets_dir / "models" / "RealESRGANv2" / "RealESRGANv2-animevideo-xsx2.onnx"),
             content=[
                 ft.Divider(),
                 ft.Row([
-                    ft.Text("Tiling parameters", size=16, weight=ft.FontWeight.BOLD),
+                    Label("Tiling parameters"),
                     ft.Icon(
                         ft.Icons.HELP_OUTLINE,
                         size=18,
@@ -118,7 +124,7 @@ ESRGAN (Enhanced Super-Resolution GAN): Optimized for real-world photos and real
                 ]),
                 ft.Divider(),
                 ft.Row([
-                    ft.Text("Scale factor", size=16, weight=ft.FontWeight.BOLD),
+                    Label("Scale factor"),
                     ft.Icon(ft.Icons.HELP_OUTLINE, size=18, tooltip="Please choose the correct model if modifying the scale factor."),
                     self.scale_factor
                 ], expand=True),
@@ -148,12 +154,12 @@ CUGAN (Cascaded-U-Net GAN): Specifically optimized for Anime, Manga, and Cartoon
         self.scale_factor = NumberInput(value="2", label="Scale factor", expand=True)
         super().__init__(
             container,
-            title = [ft.Icon(ft.Icons.IMAGE_ASPECT_RATIO), ft.Text("RealESRGAN", size=20, weight=ft.FontWeight.BOLD, expand=True)],
+            title = [ft.Icon(ft.Icons.IMAGE_ASPECT_RATIO), Subtitle("RealCUGAN")],
             default_onnx=str(assets_dir / "models" / "cugan" / "pro-conservative-up2x.onnx"),
             content=[
                 ft.Divider(),
                 ft.Row([
-                    ft.Text("Tiling parameters", size=16, weight=ft.FontWeight.BOLD),
+                    Label("Tiling parameters"),
                     ft.Icon(
                         ft.Icons.HELP_OUTLINE,
                         size=18,
@@ -165,7 +171,7 @@ CUGAN (Cascaded-U-Net GAN): Specifically optimized for Anime, Manga, and Cartoon
                 ]),
                 ft.Divider(),
                 ft.Row([
-                    ft.Text("Scale factor", size=16, weight=ft.FontWeight.BOLD),
+                    Label("Scale factor"),
                     ft.Icon(ft.Icons.HELP_OUTLINE, size=18, tooltip="Please choose the correct model if modifying the scale factor."),
                     self.scale_factor
                 ], expand=True)
@@ -191,9 +197,85 @@ It excels at creating smooth slow-motion effects and increasing frame rates by p
     def __init__(self, container: list[TransformerLayer]):
         super().__init__(
             container,
-            title=[ft.Icon(ft.Icons.SLOW_MOTION_VIDEO_OUTLINED), ft.Text("RIFE", size=20, weight=ft.FontWeight.BOLD, expand=True)],
+            title=[ft.Icon(ft.Icons.SLOW_MOTION_VIDEO_OUTLINED), Subtitle("RIFE")],
             default_onnx=str(assets_dir / "models" / "rife" / "rife_v4.10.onnx")
         )
 
     async def build_transformer(self):
         return RIFE(onnx_model_path=self.onnx_model_path.value, cache_dir=self.cache_dir.value)
+
+@ft.control
+class Bilinear_Layer(TransformerLayer):
+    desc = """A simple transformer for resizing frames using bilinear interpolation.
+Bilinear resizing is fast and stable, making it a good general-purpose choice for smooth downscaling or upscaling with moderate detail preservation."""
+
+    def __init__(self, container: list[TransformerLayer]):
+        self.scale_factor = NumberInput(value="0.5", label="Scale factor", expand=True)
+        super().__init__(
+            container,
+            title=[ft.Icon(ft.Icons.COMPRESS_OUTLINED), Subtitle("Bilinear")],
+            content=[
+                ft.Row([
+                    Label("Scale factor"),
+                    self.scale_factor
+                ], expand=True),
+            ],
+            cache=False
+        )
+
+@ft.control
+class Bicubic_Layer(TransformerLayer):
+    desc = """A simple transformer for downscaling frames using bicubic interpolation.
+Bicubic downscaling reduces image size smoothly while oftenly preserving more detail than bilinear resizing. It is fast, stable, and well-suited for general-purpose video resizing."""
+
+    def __init__(self, container: list[TransformerLayer]):
+        self.scale_factor = NumberInput(value="0.5", label="Scale factor", expand=True)
+        super().__init__(
+            container,
+            title=[ft.Icon(ft.Icons.COMPRESS_OUTLINED), Subtitle("Bicubic")],
+            content=[
+                ft.Row([
+                    Label("Scale factor"),
+                    self.scale_factor
+                ], expand=True),
+            ],
+            cache=False
+        )
+
+@ft.control
+class Lanczos_Layer(TransformerLayer):
+    desc = """A transformer for resizing frames using Lanczos interpolation.
+Lanczos resizing is designed to preserve sharp detail and reduce aliasing, often producing high-quality results for video scaling at the cost of extra processing time."""
+
+    def __init__(self, container: list[TransformerLayer]):
+        self.scale_factor = NumberInput(value="0.5", label="Scale factor", expand=True)
+        super().__init__(
+            container,
+            title=[ft.Icon(ft.Icons.COMPRESS_OUTLINED), Subtitle("Lanczos")],
+            content=[
+                ft.Row([
+                    Label("Scale factor"),
+                    self.scale_factor
+                ], expand=True),
+            ],
+            cache=False
+        )
+
+@ft.control
+class InterArea_Layer(TransformerLayer):
+    desc = """A transformer for downscaling frames using OpenCV's INTER_AREA method. (Runs on CPU so it might be slower than the others)
+INTER_AREA is especially well-suited for shrinking images, since it averages pixel neighborhoods to reduce aliasing and preserve visual quality during reduction."""
+
+    def __init__(self, container: list[TransformerLayer]):
+        self.scale_factor = NumberInput(value="0.5", label="Scale factor", expand=True)
+        super().__init__(
+            container,
+            title=[ft.Icon(ft.Icons.COMPRESS_OUTLINED), Subtitle("InterArea")],
+            content=[
+                ft.Row([
+                    Label("Scale factor"),
+                    self.scale_factor
+                ], expand=True),
+            ],
+            cache=False
+        )
