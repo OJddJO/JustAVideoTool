@@ -36,6 +36,12 @@ The main goal is to make an app for video alterations using AI with `.onnx` mode
 ### Interpolation
 - RIFE
 
+### Downscaling
+- Bilinear
+- Bicubic
+- Lanczos
+- InterArea (from cv2 through opencvv-python)
+
 ## Frameworks Used
 - [flet](https://flet.dev/): a simple framework for building [Flutter](https://flutter.dev/) apps in Python
 - [PyTorch](https://pytorch.org/): a widely used Python deep learning library
