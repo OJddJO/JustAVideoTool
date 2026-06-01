@@ -102,7 +102,7 @@ jobs:
         tag_name: ${{ github.event.inputs.version_tag }}
         name: "${{ github.event.inputs.release_name }} (${{ github.event.inputs.version_tag }})"
         draft: true
-        prerelease: true
+        prerelease: false
         files: |
           Just-A-Video-Tool-Windows.zip.*
         body: |
@@ -113,6 +113,6 @@ jobs:
           **How to install:**
           1. Download **all** attached file parts below (`.zip.001`, `.zip.002`, etc.) into the exact same folder on your PC.
           2. Right-click the **first** file (`Just-A-Video-Tool-Windows.zip.001`).
-          3. Select **7-Zip** or **WinRAR** -> **Extract Here**. The software will automatically merge all parts and extract the full unified application!
+          3. Select **7-Zip** or **WinRAR** -> **Extract in Just-A-Video-Tool-Windows**. The software will automatically merge all parts and extract the full unified application!
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
