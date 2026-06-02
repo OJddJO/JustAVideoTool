@@ -109,7 +109,7 @@ class ConsoleView(GenericView):
                     if not ffmpeg_process:
                         ffmpeg_process = subprocess.Popen(
                             shlex.split(cmd), stdin=subprocess.PIPE, stderr=subprocess.PIPE,
-                            creationflags = subprocess.CREATE_NO_WINDOW
+                            creationflags=subprocess.CREATE_NO_WINDOW
                         )
 
                     ffmpeg_process.stdin.write(frame_bytes)

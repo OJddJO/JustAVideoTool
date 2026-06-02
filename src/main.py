@@ -147,7 +147,7 @@ class VideoTool:
             cmd += f'-hide_banner -v error "{os.path.join(enc["out_dir"], file["name"])}"'
             ffmpeg_cmds.append(cmd)
         else:
-            cmd = f'ffmpeg -y -hwaccel auto -stats -stats_period 5 -i "{file["path"]}" '
+            cmd = f'ffmpeg -y -hwaccel auto -i "{file["path"]}" '
             # Video
             cmd += '-map 0:v:0 '
             cmd += f'-c:v {enc["video"]["codec"]} -pix_fmt {enc["video"]["pix_fmt"]} -preset {enc["video"]["preset"]} '
