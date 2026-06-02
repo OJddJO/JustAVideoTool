@@ -51,12 +51,13 @@ class TransformerSelector(ft.ExpansionTile):
             ft.Text(name, weight=ft.FontWeight.BOLD, expand=True),
             ft.IconButton(icon=ft.Icons.ADD_OUTLINED, on_click=self.add)
         ]))
-        self.controls=ft.Text(transformers[type]["tr"][name].desc)
+        self.controls=ft.Text(transformers[type]["tr"][name].desc, text_align=ft.TextAlign.LEFT, expand=True)
         self.controls_padding = 10
         self.expanded = False
         self.adder = adder
         self.type = type
         self.name = name
+        self.expanded_alignment = ft.Alignment.CENTER_LEFT
 
     async def add(self, e: ft.Event[ft.Button]):
         await self.adder(e, self.type, self.name)
