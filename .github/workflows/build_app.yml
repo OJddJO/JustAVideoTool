@@ -68,6 +68,30 @@ jobs:
         7z x "src/assets/models.v15.16.7z" -o"src/assets/" -y
         Remove-Item -Path "src/assets/models.v15.16.7z" -Force
 
+    - name: Update Version Configuration
+      shell: powershell
+      run: |
+        $configPath = "pyproject.toml"
+        $newVersion = "${{ github.event.inputs.version_tag }}"
+
+        write-host "Targeting version bump to: $newVersion"
+
+        if (Test-Path $configPath) {
+            # Read the current content of the file
+            $content = Get-Content -Path $configPath -Raw
+
+            # Use regex to find version = "X.X.X" and replace it with the new version tag
+            $updatedContent = $content -replace 'version\s*=\s*"[^"]+"', "version = `"$newVersion`""
+
+            # Write the modified string back to pyproject.toml using UTF-8 encoding
+            Set-Content -Path $configPath -Value $updatedContent -Encoding UTF8
+
+            write-host "Successfully updated pyproject.toml version line!"
+        } else {
+            write-error "Error: pyproject.toml file not found!"
+            exit 1
+        }
+
     - name: Package Application Executable
       run: |
         flet build windows -v
