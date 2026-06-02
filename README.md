@@ -40,7 +40,7 @@ The main goal is to make an app for video alterations using AI with `.onnx` mode
 - Bilinear
 - Bicubic
 - Lanczos
-- InterArea (from cv2 through opencvv-python)
+- InterArea (from cv2 through opencv-python)
 
 ## Frameworks Used
 - [flet](https://flet.dev/): a simple framework for building [Flutter](https://flutter.dev/) apps in Python
