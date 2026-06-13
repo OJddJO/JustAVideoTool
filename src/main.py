@@ -126,7 +126,7 @@ class VideoTool:
             # Video
             cmd += '-map 0:v:0 '
             if enc["video"]["copy"]:
-                cmd += f'-c:v copy'
+                cmd += f'-c:v copy '
             else:
                 cmd += f'-c:v {enc["video"]["codec"]} -pix_fmt {enc["video"]["pix_fmt"]} -preset {enc["video"]["preset"]} '
                 if enc["video"]["use_crf"]:
@@ -139,7 +139,7 @@ class VideoTool:
                 if stream["type"] == "audio" and stream["include"]:
                     cmd += f'-map 1:{stream["index"]} '
             if enc["audio"]["copy"]:
-                cmd += f'-c:a copy'
+                cmd += f'-c:a copy '
             else:
                 cmd += f'-c:a {enc["audio"]["codec"]} -b:a {enc["audio"]["bitrate"]} -ar {enc["audio"]["samplerate"]} -af {enc["audio"]["filter"]} {enc["audio"]["custom"]} '
             # Subtitle
