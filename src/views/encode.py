@@ -102,20 +102,20 @@ class EncodeView(GenericView):
         )
 
     def handle_audio_copy(self, e: ft.Event[ft.Checkbox]):
-        self.audio_codec.disabled = not self.audio_codec.disabled
-        self.audio_bitrate.disabled = not self.audio_bitrate.disabled
-        self.audio_samplerate.disabled = not self.audio_samplerate.disabled
-        self.audio_filter.disabled = not self.audio_filter.disabled
-        self.audio_custom.disabled = not self.audio_custom.disabled
+        self.audio_codec.disabled = e.control.value
+        self.audio_bitrate.disabled = e.control.value
+        self.audio_samplerate.disabled = e.control.value
+        self.audio_filter.disabled = e.control.value
+        self.audio_custom.disabled = e.control.value
 
     def handle_video_copy(self, e: ft.Event[ft.Checkbox]):
-        self.video_codec.disabled = not self.video_codec.disabled
-        self.video_bitrate.disabled = not self.video_bitrate.disabled
-        self.video_use_crf.disabled = not self.video_use_crf.disabled
-        self.video_crf.disabled = not self.video_crf.disabled
-        self.video_pixel_format.disabled = not self.video_pixel_format.disabled
-        self.video_preset.disabled = not self.video_preset.disabled
-        self.video_custom.disabled = not self.video_custom.disabled
+        self.video_codec.disabled = e.control.value
+        self.video_bitrate.disabled = e.control.value
+        self.video_use_crf.disabled = e.control.value
+        self.video_crf.disabled = e.control.value
+        self.video_pixel_format.disabled = e.control.value
+        self.video_preset.disabled = e.control.value
+        self.video_custom.disabled = e.control.value
 
     def handle_use_crf(self, e: ft.Event[ft.Switch]):
         if e.control.value:
@@ -198,6 +198,8 @@ class EncodeView(GenericView):
         self.subtitle_custom.value = subtitle.get("custom", "")
 
         self.handle_use_crf(ft.Event("handler", control=self.video_use_crf))
+        self.handle_audio_copy(ft.Event("handler", control=self.audio_copy))
+        self.handle_video_copy(ft.Event("handler", control=self.video_copy))
 
     async def save_params(self, e: ft.Event[ft.Button]):
         data = self.get_params()
