@@ -83,10 +83,9 @@ jobs:
             # Use regex to find version = "X.X.X" and replace it with the new version tag
             $updatedContent = $content -replace 'version\s*=\s*"[^"]+"', "version = `"$newVersion`""
 
-            # Write the modified string back to pyproject.toml using UTF-8 encoding
-            Set-Content -Path $configPath -Value $updatedContent -Encoding UTF8
+            [System.IO.File]::WriteAllText((Resolve-Path $configPath), $updatedContent, (New-Object System.Text.UTF8Encoding($false)))
 
-            write-host "Successfully updated pyproject.toml version line!"
+            write-host "Successfully updated pyproject.toml version line without BOM!"
         } else {
             write-error "Error: pyproject.toml file not found!"
             exit 1
