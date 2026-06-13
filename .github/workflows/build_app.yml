@@ -25,6 +25,24 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v4
 
+    - name: Clean Up Unused Files
+      shell: powershell
+      run: |
+        # Remove unnecessary files to free up space
+        Remove-Item -Path "build" -Recurse -Force -ErrorAction SilentlyContinue
+        Remove-Item -Path ".git" -Recurse -Force -ErrorAction SilentlyContinue
+        Remove-Item -Path ".github" -Recurse -Force -ErrorAction SilentlyContinue
+
+        # Clear pip cache
+        pip cache purge
+
+        # Clear package manager cache
+        choco cache list
+
+    - name: Package Application Executable
+      run: |
+        flet build windows -v
+
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
