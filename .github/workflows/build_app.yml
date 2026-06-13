@@ -38,6 +38,17 @@ jobs:
 
         # Clear package manager cache
         choco cache list
+        
+        # Additional aggressive cleanup
+        Remove-Item -Path "C:\ProgramData\chocolatey\cache" -Recurse -Force -ErrorAction SilentlyContinue
+        Remove-Item -Path "$env:TEMP\*" -Recurse -Force -ErrorAction SilentlyContinue
+        Remove-Item -Path "$env:USERPROFILE\AppData\Local\Temp\*" -Recurse -Force -ErrorAction SilentlyContinue
+
+        # Clear Windows Update cache
+        Remove-Item -Path "C:\Windows\SoftwareDistribution\Download\*" -Recurse -Force -ErrorAction SilentlyContinue
+
+        # Clear npm cache if installed
+        npm cache clean --force -ErrorAction SilentlyContinue
 
     - name: Set up Python
       uses: actions/setup-python@v5
