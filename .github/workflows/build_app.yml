@@ -111,14 +111,6 @@ jobs:
       run: |
         7z a -v2000m Just-A-Video-Tool-Windows.zip .\build\windows\* -y
 
-    - name: Upload Build Artifacts
-      uses: actions/upload-artifact@v7
-      with:
-        name: Just-A-Video-Tool-Windows
-        path: build/windows/
-        if-no-files-found: error
-        retention-days: 90
-
     - name: Create GitHub Release and Upload Split Assets
       uses: softprops/action-gh-release@v2
       with:
