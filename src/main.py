@@ -122,19 +122,26 @@ class VideoTool:
             fps_den = fps.denominator
 
             cmd = f'ffmpeg -y -f rawvideo -pix_fmt rgb24 -s {width}x{height} -r {fps_num}/{fps_den} -i - -i "{file["path"]}" '
+
             # Video
             cmd += '-map 0:v:0 '
-            cmd += f'-c:v {enc["video"]["codec"]} -pix_fmt {enc["video"]["pix_fmt"]} -preset {enc["video"]["preset"]} '
-            if enc["video"]["use_crf"]:
-                cmd += f'-crf {enc["video"]["crf"]} '
+            if enc["video"]["copy"]:
+                cmd += f'-c:v copy'
             else:
-                cmd += f'-b:v {enc["video"]["bitrate"]} '
-            cmd += enc["video"]["custom"] + " "
+                cmd += f'-c:v {enc["video"]["codec"]} -pix_fmt {enc["video"]["pix_fmt"]} -preset {enc["video"]["preset"]} '
+                if enc["video"]["use_crf"]:
+                    cmd += f'-crf {enc["video"]["crf"]} '
+                else:
+                    cmd += f'-b:v {enc["video"]["bitrate"]} '
+                cmd += enc["video"]["custom"] + " "
             # Audio
             for stream in file["streams"]:
                 if stream["type"] == "audio" and stream["include"]:
                     cmd += f'-map 1:{stream["index"]} '
-            cmd += f'-c:a {enc["audio"]["codec"]} -b:a {enc["audio"]["bitrate"]} -ar {enc["audio"]["samplerate"]} -af {enc["audio"]["filter"]} {enc["audio"]["custom"]} '
+            if enc["audio"]["copy"]:
+                cmd += f'-c:a copy'
+            else:
+                cmd += f'-c:a {enc["audio"]["codec"]} -b:a {enc["audio"]["bitrate"]} -ar {enc["audio"]["samplerate"]} -af {enc["audio"]["filter"]} {enc["audio"]["custom"]} '
             # Subtitle
             for stream in file["streams"]:
                 if stream["type"] == "subtitle" and stream["include"]:
@@ -144,28 +151,6 @@ class VideoTool:
             for stream in file["streams"]:
                 if stream["include"] and stream["type"] not in ("video", "audio", "subtitle"):
                     cmd += f'-map 1:{stream["index"]} '
-            cmd += f'-hide_banner -v error "{os.path.join(enc["out_dir"], file["name"])}"'
-            ffmpeg_cmds.append(cmd)
-        else:
-            cmd = f'ffmpeg -y -hwaccel auto -i "{file["path"]}" '
-            # Video
-            cmd += '-map 0:v:0 '
-            cmd += f'-c:v {enc["video"]["codec"]} -pix_fmt {enc["video"]["pix_fmt"]} -preset {enc["video"]["preset"]} '
-            if enc["video"]["use_crf"]:
-                cmd += f'-crf {enc["video"]["crf"]} '
-            else:
-                cmd += f'-b:v {enc["video"]["bitrate"]} '
-            cmd += enc["video"]["custom"] + " "
-            # Audio
-            for stream in file["streams"]:
-                if stream["type"] == "audio" and stream["include"]:
-                    cmd += f'-map 0:{stream["index"]} '
-            cmd += f'-c:a {enc["audio"]["codec"]} -b:a {enc["audio"]["bitrate"]} -ar {enc["audio"]["samplerate"]} -af {enc["audio"]["filter"]} {enc["audio"]["custom"]} '
-            # Subtitle
-            for stream in file["streams"]:
-                if stream["type"] == "subtitle" and stream["include"]:
-                    cmd += f'-map 0:{stream["index"]} '
-            cmd += f'-c:s {enc["subtitle"]["codec"]} {enc["subtitle"]["custom"]} '
             cmd += f'-hide_banner -v error "{os.path.join(enc["out_dir"], file["name"])}"'
             ffmpeg_cmds.append(cmd)
 
