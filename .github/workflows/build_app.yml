@@ -39,15 +39,10 @@ jobs:
         # Clear package manager cache
         choco cache list
 
-    - name: Package Application Executable
-      run: |
-        flet build windows -v
-
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.12'
-        cache: 'pip'
 
     - name: Install Visual Studio Build Tools
       uses: microsoft/setup-msbuild@v2
