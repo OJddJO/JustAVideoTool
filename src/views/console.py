@@ -95,6 +95,7 @@ class ConsoleView(GenericView):
             ffmpeg_process = None
 
             print(f"Running the pipeline on {file['name']} ({file['path']})")
+            print(f"CMD: {cmd}")
             start = time.time_ns()
             frame = 1
             self.frame_progress.value = 0

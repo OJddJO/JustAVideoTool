@@ -141,7 +141,7 @@ class VideoTool:
             if enc["audio"]["copy"]:
                 cmd += f'-c:a copy '
             else:
-                cmd += f'-c:a {enc["audio"]["codec"]} -b:a {enc["audio"]["bitrate"]} -ar {enc["audio"]["samplerate"]} -af {enc["audio"]["filter"]} {enc["audio"]["custom"]} '
+                cmd += f'-c:a {enc["audio"]["codec"]} -b:a {enc["audio"]["bitrate"]} -ar {enc["audio"]["samplerate"]} {enc["audio"]["custom"]} '
             # Subtitle
             for stream in file["streams"]:
                 if stream["type"] == "subtitle" and stream["include"]:

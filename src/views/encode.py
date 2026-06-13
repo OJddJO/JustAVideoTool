@@ -35,7 +35,6 @@ class EncodeView(GenericView):
         self.audio_codec = TextField(value="libopus", label="Audio codec", expand=True)
         self.audio_bitrate = TextField(value="96000", label="Audio bitrate", expand=True)
         self.audio_samplerate = TextField(value="48000", label="Audio sample rate", expand=True)
-        self.audio_filter = TextField(value="aresample=async=1:first_pts=0", label="Audio Filter", expand=True)
         self.audio_custom = TextField(label="Custom arguments for audio", expand=True)
 
         self.subtitle_codec = TextField(value="ass", label="Sutitle codec", expand=True)
@@ -80,7 +79,6 @@ class EncodeView(GenericView):
                                 ]),
                                 ft.Row([ Label("Codec"), self.audio_codec ]),
                                 ft.Row([ Label("Bitrate"), self.audio_bitrate, ft.VerticalDivider(), Label("Sample rate"), self.audio_samplerate ]),
-                                ft.Row([ Label("Filter"), self.audio_filter ]),
                                 self.audio_custom,
                             ], expand=True),
                         ),
@@ -105,7 +103,6 @@ class EncodeView(GenericView):
         self.audio_codec.disabled = e.control.value
         self.audio_bitrate.disabled = e.control.value
         self.audio_samplerate.disabled = e.control.value
-        self.audio_filter.disabled = e.control.value
         self.audio_custom.disabled = e.control.value
 
     def handle_video_copy(self, e: ft.Event[ft.Checkbox]):
@@ -139,7 +136,6 @@ class EncodeView(GenericView):
                 "codec": self.audio_codec.value,
                 "bitrate": self.audio_bitrate.value,
                 "samplerate": self.audio_samplerate.value,
-                "filter": self.audio_filter.value,
                 "custom": self.audio_custom.value
             },
             "video": {
@@ -180,7 +176,6 @@ class EncodeView(GenericView):
         self.audio_codec.value = audio.get("codec", "")
         self.audio_bitrate.value = audio.get("bitrate", "")
         self.audio_samplerate.value = audio.get("samplerate", "")
-        self.audio_filter.value = audio.get("filter", "")
         self.audio_custom.value = audio.get("custom", "")
 
         video = params.get("video", {})
