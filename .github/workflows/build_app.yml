@@ -25,6 +25,39 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v4
 
+    - name: Maximize Windows Runner Disk Space
+      shell: powershell
+      run: |
+        Write-Host "Disk space before cleanup:"
+        Get-Volume
+
+        # 1. Remove the Hosted Tool Cache (Node, Python, Go, Ruby versions) ~8-10 GB
+        # if (Test-Path "$env:AGENT_TOOLSDIRECTORY") {
+        #     Write-Host "Removing Tool Cache..."
+        #     Remove-Item -RecurSource -Force "$env:AGENT_TOOLSDIRECTORY" -ErrorAction SilentlyContinue
+        # }
+
+        # 2. Remove Android SDKs ~12-15 GB
+        if (Test-Path "$env:ANDROID_HOME") {
+            Write-Host "Removing Android SDK..."
+            Remove-Item -RecurSource -Force "$env:ANDROID_HOME" -ErrorAction SilentlyContinue
+        }
+
+        # 3. Clean up Windows Package Manager & Chocolatey Caches ~2-3 GB
+        if (Test-Path "$env:ChocolateyInstall\cache") {
+            Write-Host "Cleaning Chocolatey cache..."
+            Remove-Item -RecurSource -Force "$env:ChocolateyInstall\cache" -ErrorAction SilentlyContinue
+        }
+
+        # 4. Optional: Remove .NET SDKs/Runtimes if not building .NET apps ~2-5 GB
+        # $dotnetPath = "C:\Program Files\dotnet"
+        # if (Test-Path $dotnetPath) {
+        #     Remove-Item -RecurSource -Force $dotnetPath -ErrorAction SilentlyContinue
+        # }
+
+        Write-Host "Disk space after cleanup:"
+        Get-Volume
+
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
@@ -103,7 +136,7 @@ jobs:
 
         # Clear package manager cache
         choco cache list
-        
+
         # Additional aggressive cleanup
         Remove-Item -Path "C:\ProgramData\chocolatey\cache" -Recurse -Force -ErrorAction SilentlyContinue
         Remove-Item -Path "$env:TEMP\*" -Recurse -Force -ErrorAction SilentlyContinue
