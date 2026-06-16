@@ -121,10 +121,10 @@ class VideoTool:
             fps_num = fps.numerator * pipeline.framegen_factor
             fps_den = fps.denominator
 
-            cmd = f'ffmpeg -y -f rawvideo -pix_fmt rgb24 -s {width}x{height} -r {fps_num}/{fps_den} -i - -i "{file["path"]}" '
+            cmd = f'ffmpeg -y -fflags +genpts -f rawvideo -pix_fmt rgb24 -s {width}x{height} -r {fps_num}/{fps_den} -i - -i "{file["path"]}" -filter_complex "[0:v:0]setpts=N/FRAME_RATE/TB[sync_video]" '
 
             # Video
-            cmd += '-map 0:v:0 '
+            cmd += '-map "[sync_video]" '
             if enc["video"]["copy"]:
                 cmd += f'-c:v copy '
             else:

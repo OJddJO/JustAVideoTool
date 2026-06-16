@@ -11,7 +11,6 @@ class EncodeView(GenericView):
         self.output_dir = TextField(value="output", label="Output directory", expand=True)
         self.output_extension = TextField(value="mkv", label="Container extension", expand=True, margin=ft.Margin(top=5))
 
-        self.video_copy = ft.Checkbox("Copy from source", on_change=self.handle_video_copy)
         self.video_codec = TextField(value="libsvtav1", label="Video codec", expand=True)
         self.video_bitrate = TextField(value="3000k", label="Video bitrate", expand=True)
         self.__video_bitrate_settings = ft.Row([Label("Bitrate"), self.video_bitrate])
@@ -31,7 +30,6 @@ class EncodeView(GenericView):
         self.video_preset = TextField(value="4", label="Encoder preset", expand=True)
         self.video_custom = TextField(label="Custom arguments for video", expand=True)
 
-        self.audio_copy = ft.Checkbox("Copy from source", on_change=self.handle_audio_copy)
         self.audio_codec = TextField(value="libopus", label="Audio codec", expand=True)
         self.audio_bitrate = TextField(value="96000", label="Audio bitrate", expand=True)
         self.audio_samplerate = TextField(value="48000", label="Audio sample rate", expand=True)
@@ -54,10 +52,7 @@ class EncodeView(GenericView):
                         ),
                         GenericContainer(
                             content=ft.Column([
-                                ft.Row([
-                                    ft.Text("Video settings", size=20, weight=ft.FontWeight.BOLD, expand=True),
-                                    self.video_copy
-                                ]),
+                                ft.Text("Video settings", size=20, weight=ft.FontWeight.BOLD, expand=True),
                                 ft.Row([Label("Codec"), self.video_codec]),
                                 ft.Row([
                                     ft.Stack([
@@ -73,10 +68,7 @@ class EncodeView(GenericView):
                         ),
                         GenericContainer(
                             content=ft.Column([
-                                ft.Row([
-                                    ft.Text("Audio settings", size=20, weight=ft.FontWeight.BOLD, expand=True),
-                                    self.audio_copy
-                                ]),
+                                ft.Text("Audio settings", size=20, weight=ft.FontWeight.BOLD, expand=True),
                                 ft.Row([ Label("Codec"), self.audio_codec ]),
                                 ft.Row([ Label("Bitrate"), self.audio_bitrate, ft.VerticalDivider(), Label("Sample rate"), self.audio_samplerate ]),
                                 self.audio_custom,
@@ -99,21 +91,6 @@ class EncodeView(GenericView):
             ]
         )
 
-    def handle_audio_copy(self, e: ft.Event[ft.Checkbox]):
-        self.audio_codec.disabled = e.control.value
-        self.audio_bitrate.disabled = e.control.value
-        self.audio_samplerate.disabled = e.control.value
-        self.audio_custom.disabled = e.control.value
-
-    def handle_video_copy(self, e: ft.Event[ft.Checkbox]):
-        self.video_codec.disabled = e.control.value
-        self.video_bitrate.disabled = e.control.value
-        self.video_use_crf.disabled = e.control.value
-        self.video_crf.disabled = e.control.value
-        self.video_pixel_format.disabled = e.control.value
-        self.video_preset.disabled = e.control.value
-        self.video_custom.disabled = e.control.value
-
     def handle_use_crf(self, e: ft.Event[ft.Switch]):
         if e.control.value:
             self.__video_bitrate_settings.visible = False
@@ -132,14 +109,12 @@ class EncodeView(GenericView):
             "out_dir": self.output_dir.value,
             "ext": self.output_extension.value,
             "audio": {
-                "copy": self.audio_copy.value,
                 "codec": self.audio_codec.value,
                 "bitrate": self.audio_bitrate.value,
                 "samplerate": self.audio_samplerate.value,
                 "custom": self.audio_custom.value
             },
             "video": {
-                "copy": self.video_copy.value,
                 "codec": self.video_codec.value,
                 "use_crf": self.video_use_crf.value,
                 "bitrate": self.video_bitrate.value,
@@ -172,14 +147,12 @@ class EncodeView(GenericView):
 
         self.output_extension.value = params.get("ext", "")
         audio = params.get("audio", {})
-        self.audio_copy.value = audio.get("copy", False)
         self.audio_codec.value = audio.get("codec", "")
         self.audio_bitrate.value = audio.get("bitrate", "")
         self.audio_samplerate.value = audio.get("samplerate", "")
         self.audio_custom.value = audio.get("custom", "")
 
         video = params.get("video", {})
-        self.video_copy.value = video.get("copy", False)
         self.video_codec.value = video.get("codec", "")
         self.video_use_crf.value = video.get("use_crf", False)
         self.video_bitrate.value = video.get("bitrate", "")
@@ -193,8 +166,6 @@ class EncodeView(GenericView):
         self.subtitle_custom.value = subtitle.get("custom", "")
 
         self.handle_use_crf(ft.Event("handler", control=self.video_use_crf))
-        self.handle_audio_copy(ft.Event("handler", control=self.audio_copy))
-        self.handle_video_copy(ft.Event("handler", control=self.video_copy))
 
     async def save_params(self, e: ft.Event[ft.Button]):
         data = self.get_params()
