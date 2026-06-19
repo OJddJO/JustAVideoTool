@@ -103,6 +103,7 @@ class VideoTool:
         self.run_button.update()
 
         os.makedirs(enc["out_dir"], exist_ok=True)
+        os.makedirs("temp", exist_ok=True)
         ffmpeg_cmds = []
         for file in files:
             video_stream = None
@@ -121,43 +122,59 @@ class VideoTool:
             fps_num = fps.numerator * pipeline.framegen_factor
             fps_den = fps.denominator
 
-            cmd = f'ffmpeg -y -fflags +genpts -f rawvideo -pix_fmt rgb24 -s {width}x{height} -r {fps_num}/{fps_den} -i - -i "{file["path"]}" -filter_complex "[0:v:0]setpts=N/FRAME_RATE/TB[sync_video]" '
+            cmd_video = f'ffmpeg -y -fflags +genpts -f rawvideo -pix_fmt rgb24 -s {width}x{height} -r {fps_num}/{fps_den} -i - '
 
-            # Video
-            cmd += '-map "[sync_video]" '
-            if enc["video"]["copy"]:
-                cmd += f'-c:v copy '
+            # Video only
+            cmd_video += f'-map 0:v:0 -c:v {enc["video"]["codec"]} -pix_fmt {enc["video"]["pix_fmt"]} -preset {enc["video"]["preset"]} '
+            if enc["video"]["use_crf"]:
+                cmd_video += f'-crf {enc["video"]["crf"]} '
             else:
-                cmd += f'-c:v {enc["video"]["codec"]} -pix_fmt {enc["video"]["pix_fmt"]} -preset {enc["video"]["preset"]} '
-                if enc["video"]["use_crf"]:
-                    cmd += f'-crf {enc["video"]["crf"]} '
-                else:
-                    cmd += f'-b:v {enc["video"]["bitrate"]} '
-                cmd += enc["video"]["custom"] + " "
-            # Audio
+                cmd_video += f'-b:v {enc["video"]["bitrate"]} '
+            cmd_video += enc["video"]["custom"] + " "
+            cmd_video += f'-hide_banner -v error "{os.path.join("temp", "video_0.mkv")}"'
+
+            # Extract audio cmd
+            cmd_audio = f'ffmpeg -y -fflags +genpts+igndts -i "{file["path"]}" '
             for stream in file["streams"]:
                 if stream["type"] == "audio" and stream["include"]:
-                    cmd += f'-map 1:{stream["index"]} '
-            if enc["audio"]["copy"]:
-                cmd += f'-c:a copy '
-            else:
-                cmd += f'-c:a {enc["audio"]["codec"]} -b:a {enc["audio"]["bitrate"]} -ar {enc["audio"]["samplerate"]} {enc["audio"]["custom"]} '
-            # Subtitle
+                    cmd_audio += f'-map 0:{stream["index"]} -c:a copy "{os.path.join("temp", "audio_{}.mkv".format(stream["index"]))}" '
+            cmd_audio += '-hide_banner -v error'
+
+            # Merge video with other streams
+            cmd_merge = f'ffmpeg -y -fflags +genpts+igndts -i "{os.path.join("temp", "video_0.mkv")}" '
+            audio_included = 0
+            for stream in file ["streams"]: # Include the audio files
+                if stream["type"] == "audio" and stream["include"]:
+                    cmd_merge += f'-fflags +genpts+igndts -i "{os.path.join("temp", "audio_{}.mkv".format(stream["index"]))}" '
+                    audio_included += 1
+            cmd_merge += f'-i "{file["path"]}" '
+            cmd_merge += '-map 0:v:0 '
+            # Mapping
+            ## Audio
+            for i in range(1, audio_included + 1):
+                cmd_merge += f'-map {i}:a:0 '
+            ## Subtitle
             for stream in file["streams"]:
                 if stream["type"] == "subtitle" and stream["include"]:
-                    cmd += f'-map 1:{stream["index"]} '
-            cmd += f'-c:s {enc["subtitle"]["codec"]} {enc["subtitle"]["custom"]} '
-            # Other
+                    cmd_merge += f'-map {audio_included + 1}:{stream["index"]} '
+            ## Other
             for stream in file["streams"]:
                 if stream["include"] and stream["type"] not in ("video", "audio", "subtitle"):
-                    cmd += f'-map 1:{stream["index"]} '
-            cmd += f'-hide_banner -v error "{os.path.join(enc["out_dir"], file["name"])}"'
-            ffmpeg_cmds.append(cmd)
+                    cmd_merge += f'-map {audio_included + 1}:{stream["index"]} '
+            # Parameters
+            cmd_merge += '-c:v copy '
+            for i in range(audio_included):
+                cmd_merge += f'-af:a:{i} "aresample=async=1:first_pts=0" '
+            cmd_merge += f'-c:a {enc["audio"]["codec"]} -b:a {enc["audio"]["bitrate"]} -ar {enc["audio"]["samplerate"]} {enc["audio"]["custom"]} '
+            cmd_merge += f'-c:s {enc["subtitle"]["codec"]} {enc["subtitle"]["custom"]} '
+            cmd_merge += '-disposition:v:0 default -correct_ts_overflow 1 '
+            cmd_merge += f'-hide_banner -v error "{os.path.join(enc["out_dir"], file["name"])}" '
+            ffmpeg_cmds.append((cmd_video, cmd_audio, cmd_merge))
 
         def thread_target():
             try:
                 self.console.run_pipeline(
-                    files, pipeline, ffmpeg_cmds, video_stream["nb_frames"] * pipeline.framegen_factor if pipeline else None
+                    files, pipeline, ffmpeg_cmds, video_stream["nb_frames"] * pipeline.framegen_factor
                 )
             finally:
                 e.page.run_task(self.handle_natural_completion)
@@ -188,12 +205,13 @@ class VideoTool:
         self.pipeline_thread.start()
 
     async def handle_natural_completion(self):
+        self.page.window.on_event = None
+        self.page.window.prevent_close = False
         self.stop_button.visible = False
         self.run_button.visible = True
         self.stop_button.update()
         self.stop_button.disabled = False
         self.run_button.update()
-        self.page.window.prevent_close = False
 
     async def stop(self, e: ft.Event[ft.Button]):
         self.stop_button.disabled = True

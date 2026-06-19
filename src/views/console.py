@@ -74,107 +74,127 @@ class ConsoleView(GenericView):
                 else:
                     await asyncio.sleep(0.1)
 
-    def run_pipeline(self, files: list, pipeline: ModularProcessingPipeline, ffmpeg_cmds: list[str], nb_frames: int):
+    def run_pipeline(self, files: list, pipeline: ModularProcessingPipeline, ffmpeg_cmds: tuple[str], nb_frames: int):
         self.is_cancelled = False
-        error = 0
+        error = False
         nb_of_files = len(files)
 
-        self.progress_bar.value = 0
-        if self.console_focused: self.progress_bar.update()
+        # UI Update Helper
+        def update_ui(control: ft.Control, value: str | float):
+            control.value = value
+            if self.console_focused:
+                control.update()
+
+        update_ui(self.progress_bar, 0)
 
         for i, file in enumerate(files):
             if self.is_cancelled:
-                self.progress_status.value = "Pipeline cancelled by user"
-                if self.console_focused: self.progress_status.update()
-                error = 0
+                update_ui(self.progress_status, "Pipeline cancelled by user")
                 break
 
-            self.progress_status.value = f"Processing {i+1}/{nb_of_files} files"
-            if self.console_focused: self.progress_status.update()
-            cmd = ffmpeg_cmds[i]
-            ffmpeg_process = None
+            update_ui(self.progress_status, f"Processing {i+1}/{nb_of_files} files")
 
-            print(f"Running the pipeline on {file['name']} ({file['path']})")
-            print(f"CMD: {cmd}")
-            start = time.time_ns()
-            frame = 1
-            self.frame_progress.value = 0
-            if self.console_focused: self.frame_progress.update()
+            # Unpack the commands (cmd_audio can now be a list of separate command strings or a single string)
+            cmd_video, cmd_audio, cmd_merge = ffmpeg_cmds[i]
+            video_process = None
+            start_time = time.time_ns()
+
+            print(f"\nRunning pipeline on: {file['name']} ({file['path']})")
+            update_ui(self.frame_progress, 0)
+
             try:
-                for frame_bytes in pipeline.stream_pipeline(file["path"]):
+                print("Processing video frames...")
+                for frame, frame_bytes in enumerate(pipeline.stream_pipeline(file["path"]), start=1):
                     if self.is_cancelled:
-                        print("Cancellation detected! Terminating FFmpeg...")
-                        if ffmpeg_process: ffmpeg_process.terminate()  # Instantly kills the FFmpeg process safely
+                        print("Cancellation detected! Killing video worker...")
+                        if video_process: video_process.terminate()
                         break
 
-                    if not ffmpeg_process:
-                        ffmpeg_process = subprocess.Popen(
-                            shlex.split(cmd), stdin=subprocess.PIPE, stderr=subprocess.PIPE,
+                    if not video_process:
+                        video_process = subprocess.Popen(
+                            shlex.split(cmd_video),
+                            stdin=subprocess.PIPE,
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.PIPE,
                             creationflags=subprocess.CREATE_NO_WINDOW
                         )
 
-                    ffmpeg_process.stdin.write(frame_bytes)
-                    ffmpeg_process.stdin.flush()
+                    video_process.stdin.write(frame_bytes)
+                    video_process.stdin.flush()
 
-                    if frame%100 == 0 or frame == nb_frames:
-                        self.frame_progress.value = frame/nb_frames
-                        if self.console_focused: self.frame_progress.update()
-                    frame += 1
+                    if frame % 100 == 0 or frame == nb_frames:
+                        update_ui(self.frame_progress, frame / nb_frames)
 
-                if ffmpeg_process and not self.is_cancelled:
+                # Finalize Video Track Container
+                if video_process and not self.is_cancelled:
                     print("Closing FFmpeg pipe and finalizing video container...")
-                    ffmpeg_process.stdin.close()
-                    while not ffmpeg_process.stdin.closed:
-                        time.sleep(0.1)
+                    video_process.stdin.close()
+                    video_process.wait()
 
             except Exception as pipe_err:
-                error_traceback = traceback.format_exc()
-                print(f"❌ Pipeline error on {file['name']}:\n{error_traceback}\n{pipe_err}")
-                if ffmpeg_process and ffmpeg_process.stdin and not ffmpeg_process.stdin.closed:
-                    ffmpeg_process.stdin.close()
+                print(f"Pipeline processing crash on {file['name']}:\n{traceback.format_exc()}\n{pipe_err}")
+                if video_process and video_process.stdin and not video_process.stdin.closed:
+                    video_process.stdin.close()
+                error = True
 
-            finally:
-                if ffmpeg_process:
-                    return_code = ffmpeg_process.wait()
-                    if self.is_cancelled:
-                        print(f"Process for {file['name']} was forcefully aborted.")
-                        self.progress_status.value = "Pipeline cancelled by user"
-                        if self.console_focused: self.progress_status.update()
-                        error = 1
-                        break
+            if self.is_cancelled or (video_process and video_process.returncode != 0):
+                if self.is_cancelled:
+                    print("Pipeline cancelled by user")
+                    update_ui(self.progress_status, "Pipeline cancelled by user")
+                elif video_process and video_process.returncode != 0:
+                    print(f"Video process failed with exitcode {video_process.returncode}!\nFFmpeg error logs:\n{video_process.stderr.read().decode().strip()}")
+                    update_ui(self.progress_status, f"Failed on {file['name']}!")
+                error = True
+                break
 
-                    end = time.time_ns()
+            # Demux audios
+            print("Extracting audio from source file...")
+            update_ui(self.progress_status, "Extracting audio from source file")
 
-                    if return_code != 0:
-                        stderr_bytes = ffmpeg_process.stderr.read()
-                        ffmpeg_errors = stderr_bytes.decode().strip()
-                        print(f"FFmpeg failed with exitcode {return_code} on {file['name']}")
-                        print(f"FFmpeg Error Log:\n{ffmpeg_errors}")
+            audio_process = subprocess.run(
+                shlex.split(cmd_audio),
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+                creationflags=subprocess.CREATE_NO_WINDOW
+            )
+            if audio_process.returncode != 0:
+                print(f"Failed to extract audio from source with exitcode {audio_process.returncode} !\nFFmpeg error logs:\n{audio_process.stderr.decode().strip()}")
+                update_ui(self.progress_status, f"Failed on {file['name']}!")
+                error = True
+                break
 
-                        self.progress_status.value = f"Failed on {file['name']}!"
-                        if self.console_focused: self.progress_status.update()
-                        error = 1
-                        break
-                else:
-                    # If FFmpeg never even spawned
-                    error = 1
-                    break
+            # Mux streams
+            print("Merging streams to video stream...")
+            update_ui(self.progress_status, "Merging streams to video stream")
 
-            print(f"Video {file['name']} process complete!")
-            print(f"Took {round((end - start) / 1e9, 4)} seconds.")
+            merge_process = subprocess.run(
+                shlex.split(cmd_merge),
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+                creationflags=subprocess.CREATE_NO_WINDOW
+            )
 
-            self.progress_bar.value = (i+1)/nb_of_files
-            if self.console_focused: self.progress_bar.update()
+            if merge_process.returncode != 0:
+                print(f"Merge process failed with exitcode {merge_process.returncode}!\nFFmpeg error logs:\n{merge_process.stderr.decode().strip()}")
+                update_ui(self.progress_status, f"Failed on {file['name']}!")
+                error = True
+                break
+
+            end_time = time.time_ns()
+            print(f"Video {file['name']} processed successfully in {round((end_time - start_time) / 1e9, 4)}s!")
+            update_ui(self.progress_bar, (i + 1) / nb_of_files)
 
         if not error:
-            self.progress_status.value = "Done !"
-            if self.console_focused: self.progress_status.update()
+            update_ui(self.progress_status, "Done !")
         else:
-            self.progress_bar.value = 1
-            self.frame_progress.value = 0
-            if self.console_focused:
-                self.progress_bar.update()
-                self.frame_progress.update()
+            update_ui(self.progress_bar, 1)
+            update_ui(self.frame_progress, 0)
+
+        if os.path.exists("temp"):
+            for temp_file in os.listdir("temp"):
+                file_path = os.path.join("temp", temp_file)
+                if os.path.isfile(file_path):
+                    os.remove(file_path)
 
         pipeline.clean_memory()
 

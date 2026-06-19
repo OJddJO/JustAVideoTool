@@ -169,3 +169,4 @@ sample.*
 cache/
 output/
 *.javt_param
+temp/

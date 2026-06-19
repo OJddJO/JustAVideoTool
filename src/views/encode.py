@@ -31,7 +31,7 @@ class EncodeView(GenericView):
         self.video_custom = TextField(label="Custom arguments for video", expand=True)
 
         self.audio_codec = TextField(value="libopus", label="Audio codec", expand=True)
-        self.audio_bitrate = TextField(value="96000", label="Audio bitrate", expand=True)
+        self.audio_bitrate = TextField(value="96k", label="Audio bitrate", expand=True)
         self.audio_samplerate = TextField(value="48000", label="Audio sample rate", expand=True)
         self.audio_custom = TextField(label="Custom arguments for audio", expand=True)
 
