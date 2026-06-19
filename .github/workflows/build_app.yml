@@ -131,7 +131,7 @@ jobs:
 
     - name: Package Application Executable
       run: |
-        Copy-Item -Path "${{ matrix.req_file }}" -Destination "." -Force
+        Copy-Item -Path "${{ matrix.req_file }}" -Destination "./requirements.txt" -Force
         flet build windows -v
 
     - name: Include License in Build Output
