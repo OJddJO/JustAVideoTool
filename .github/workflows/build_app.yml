@@ -164,9 +164,18 @@ jobs:
           Because these standalone packages bundle local GPU runtimes and AI models, they have been split into 2GB volumes to satisfy server limits.
 
           **How to install:**
-          1. Choose either the **Base_TRT** or **TensorRT-RTX** build variations based on your device profile.
+          1. Choose either the **TRT** or **TRT-RTX** build variations based on your device profile.
           2. Download **all** attached file parts belonging to your variant (`.zip.001`, `.zip.002`, etc.) into the exact same folder on your PC.
-          3. Right-click the **first** file (e.g., `Just_A_Video_Tool-Windows-${{ matrix.target }}.zip.001`).
+          3. Right-click the **first** file (e.g., `Just_A_Video_Tool-Windows-VERSION_YOU_NEED.zip.001`).
           4. Select **7-Zip** or **WinRAR** -> **Extract**. The utility software will automatically merge all matching parts and extract your full unified application!
+
+          ---
+
+          ## What version should I choose ?
+          If you have an RTX series, go for the **TRT-RTX** version.
+          If you have other series, go for the **TRT** version.
+
+          GPUs older than the RTX 20 series or non Nvidia are currently not supported.
+
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
