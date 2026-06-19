@@ -1,7 +1,7 @@
 import torch
 import torchaudio.functional as TA_F
 
-from modules.video_transformer import VideoTransformer
+from ..video_transformer import VideoTransformer
 
 class Lanczos(VideoTransformer):
     def __init__(self, scale=0.5):

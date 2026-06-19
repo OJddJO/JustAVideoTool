@@ -1,0 +1,14 @@
+--extra-index-url https://download.pytorch.org/whl/cu126 https://pypi.nvidia.com
+flet==0.85.1
+numpy==2.4.6
+av==17.0.1
+tensorrt-rtx==1.5.0.114
+onnxruntime-gpu==1.26.0
+onnxruntime-trt-rtx==1.23.2
+torch==2.11.0+cu126
+torch_tensorrt_rtx==2.11.0
+torchvision==0.26.0+cu126
+torchaudio==2.11.0+cu126
+nvidia-cuda-runtime-cu12==12.6.77
+nvidia-cudnn-cu12==9.22.0.52
+opencv-python-headless==4.13.0.92

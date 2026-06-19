@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 import torch
-from typing import Any
 
 class VideoTransformer(ABC):
     @abstractmethod

@@ -21,6 +21,16 @@ jobs:
       PYTHONUTF8: 1
       FLET_CLI_NO_RICH_OUTPUT: 1
 
+    # Define the build matrix for both architectures
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - target: "TRT"
+            req_file: "requirements/requirements_TRT.txt"
+          - target: "TRT-RTX"
+            req_file: "requirements/requirements_TRT-RTX.txt"
+
     steps:
     - name: Checkout Code
       uses: actions/checkout@v4
@@ -31,29 +41,17 @@ jobs:
         Write-Host "Disk space before cleanup:"
         Get-Volume
 
-        # 1. Remove the Hosted Tool Cache (Node, Python, Go, Ruby versions) ~8-10 GB
-        # if (Test-Path "$env:AGENT_TOOLSDIRECTORY") {
-        #     Write-Host "Removing Tool Cache..."
-        #     Remove-Item -Recurse -Force "$env:AGENT_TOOLSDIRECTORY" -ErrorAction SilentlyContinue
-        # }
-
-        # 2. Remove Android SDKs ~12-15 GB
+        # Remove Android SDKs ~12-15 GB
         if (Test-Path "$env:ANDROID_HOME") {
             Write-Host "Removing Android SDK..."
             Remove-Item -Recurse -Force "$env:ANDROID_HOME" -ErrorAction SilentlyContinue
         }
 
-        # 3. Clean up Windows Package Manager & Chocolatey Caches ~2-3 GB
+        # Clean up Windows Package Manager & Chocolatey Caches ~2-3 GB
         if (Test-Path "$env:ChocolateyInstall\cache") {
             Write-Host "Cleaning Chocolatey cache..."
             Remove-Item -Recurse -Force "$env:ChocolateyInstall\cache" -ErrorAction SilentlyContinue
         }
-
-        # 4. Optional: Remove .NET SDKs/Runtimes if not building .NET apps ~2-5 GB
-        # $dotnetPath = "C:\Program Files\dotnet"
-        # if (Test-Path $dotnetPath) {
-        #     Remove-Item -Recurse -Force $dotnetPath -ErrorAction SilentlyContinue
-        # }
 
         Write-Host "Disk space after cleanup:"
         Get-Volume
@@ -78,13 +76,10 @@ jobs:
         channel: 'stable'
         cache: true
 
-    - name: Install System Dependencies
+    - name: Install System/Flet Dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install setuptools wheel
-
-    - name: Install Flet CLI Tools
-      run: pip install "flet[cli]"
+        pip install setuptools wheel "flet[cli]"
 
     - name: Download Pre-trained Models from Release
       shell: powershell
@@ -109,14 +104,9 @@ jobs:
         write-host "Targeting version bump to: $newVersion"
 
         if (Test-Path $configPath) {
-            # Read the current content of the file
             $content = Get-Content -Path $configPath -Raw
-
-            # Use regex to find version = "X.X.X" and replace it with the new version tag
             $updatedContent = $content -replace 'version\s*=\s*"[^"]+"', "version = `"$newVersion`""
-
             [System.IO.File]::WriteAllText((Resolve-Path $configPath), $updatedContent, (New-Object System.Text.UTF8Encoding($false)))
-
             write-host "Successfully updated pyproject.toml version line without BOM!"
         } else {
             write-error "Error: pyproject.toml file not found!"
@@ -126,36 +116,27 @@ jobs:
     - name: Clean Up Unused Files
       shell: powershell
       run: |
-        # Remove unnecessary files to free up space
         Remove-Item -Path "build" -Recurse -Force -ErrorAction SilentlyContinue
         Remove-Item -Path ".git" -Recurse -Force -ErrorAction SilentlyContinue
         Remove-Item -Path ".github" -Recurse -Force -ErrorAction SilentlyContinue
 
-        # Clear pip cache
         pip cache purge
-
-        # Clear package manager cache
         choco cache list
 
-        # Additional aggressive cleanup
         Remove-Item -Path "C:\ProgramData\chocolatey\cache" -Recurse -Force -ErrorAction SilentlyContinue
         Remove-Item -Path "$env:TEMP\*" -Recurse -Force -ErrorAction SilentlyContinue
         Remove-Item -Path "$env:USERPROFILE\AppData\Local\Temp\*" -Recurse -Force -ErrorAction SilentlyContinue
-
-        # Clear Windows Update cache
         Remove-Item -Path "C:\Windows\SoftwareDistribution\Download\*" -Recurse -Force -ErrorAction SilentlyContinue
-
-        # Clear npm cache if installed
         npm cache clean --force -ErrorAction SilentlyContinue
 
     - name: Package Application Executable
       run: |
+        Copy-Item -Path "${{ matrix.req_file }}" -Destination "." -Force
         flet build windows -v
 
     - name: Include License in Build Output
       shell: powershell
       run: |
-        # Checks if the LICENSE file exists in your repo root before copying to avoid errors
         if (Test-Path "LICENSE") {
             Copy-Item -Path "LICENSE" -Destination "build/windows/" -Force
             echo "Successfully bundled LICENSE into the build folder!"
@@ -163,10 +144,10 @@ jobs:
             echo "Warning: LICENSE file not found in repository root."
         }
 
-    - name: Compress Build Into Multi-Part Volumes
+    - name: Compress Build Into Architecture-Specific Multi-Part Volumes
       shell: powershell
       run: |
-        7z a -v2000m Just-A-Video-Tool-Windows.zip .\build\windows\* -y
+        7z a -v2000m Just_A_Video_Tool-Windows-${{ matrix.target }}.zip .\build\windows\* -y
 
     - name: Create GitHub Release and Upload Split Assets
       uses: softprops/action-gh-release@v2
@@ -176,15 +157,16 @@ jobs:
         draft: true
         prerelease: false
         files: |
-          Just-A-Video-Tool-Windows.zip.*
+          Just_A_Video_Tool-Windows-${{ matrix.target }}.zip.*
         body: |
           ### 📦 Application Installation Instructions (Multi-Part Download)
 
-          Because this standalone package bundles local TensorRT and CUDA runtimes (~5GB) and AI models (~1GB), it has been split into 2GB volumes to satisfy server limits.
+          Because these standalone packages bundle local GPU runtimes and AI models, they have been split into 2GB volumes to satisfy server limits.
 
           **How to install:**
-          1. Download **all** attached file parts below (`.zip.001`, `.zip.002`, etc.) into the exact same folder on your PC.
-          2. Right-click the **first** file (`Just-A-Video-Tool-Windows.zip.001`).
-          3. Select **7-Zip** or **WinRAR** -> **Extract in Just-A-Video-Tool-Windows**. The software will automatically merge all parts and extract the full unified application!
+          1. Choose either the **Base_TRT** or **TensorRT-RTX** build variations based on your device profile.
+          2. Download **all** attached file parts belonging to your variant (`.zip.001`, `.zip.002`, etc.) into the exact same folder on your PC.
+          3. Right-click the **first** file (e.g., `Just_A_Video_Tool-Windows-${{ matrix.target }}.zip.001`).
+          4. Select **7-Zip** or **WinRAR** -> **Extract**. The utility software will automatically merge all matching parts and extract your full unified application!
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

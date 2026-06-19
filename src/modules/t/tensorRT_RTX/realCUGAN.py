@@ -5,7 +5,7 @@ import torch
 import torch.nn.functional as F
 import gc
 
-from modules.video_transformer import VideoTransformer
+from ...video_transformer import VideoTransformer
 
 class RealCUGAN(VideoTransformer):
     def __init__(self, onnx_model_path="models/cugan/pro-conservative-up2x.onnx", cache_dir="cache", tile_width=620, tile_height=360, tile_pad=32, scale=2):
@@ -38,17 +38,15 @@ class RealCUGAN(VideoTransformer):
         cache = os.path.join(self.cache_dir, "CUGAN", os.path.basename(self.onnx_model_path), f"{dim_w}x{dim_h}")
         os.makedirs(cache, exist_ok=True)
         providers = [
-            ('TensorrtExecutionProvider', {
+            ('NvTensorRTRTXExecutionProvider', {
                 'device_id': 0,
-                'trt_max_workspace_size': 4294967296,
-                'trt_fp16_enable': True,
-                'trt_engine_cache_enable': True,
-                'trt_engine_cache_path': cache,
-                'trt_profile_min_shapes': shape_str,
-                'trt_profile_opt_shapes': shape_str,
-                'trt_profile_max_shapes': shape_str,
-            }),
-            ('CUDAExecutionProvider', {'device_id': 0}),
+                'nv_max_workspace_size': 4294967296,
+                'enable_cuda_graph': True,
+                'nv_runtime_cache_path': cache,
+                'nv_profile_min_shapes': shape_str,
+                'nv_profile_opt_shapes': shape_str,
+                'nv_profile_max_shapes': shape_str,
+            })
         ]
         self.session = ort.InferenceSession(self.onnx_model_path, providers=providers)
 

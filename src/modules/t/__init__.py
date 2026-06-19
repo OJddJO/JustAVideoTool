@@ -1,5 +1,15 @@
-from modules.t.nvidia import *
-from modules.t.bilinear import Bilinear
-from modules.t.bicubic import Bicubic
-from modules.t.interarea import InterArea
-from modules.t.lanczos import Lanczos
+import os
+__arch = os.environ.get("APP_TARGET_ARCH")
+
+match __arch:
+    case "TRT-RTX":
+        from .tensorRT_RTX import *
+    case "TRT":
+        from .tensorRT import *
+    case _:
+        print("Device architecture not found !")
+
+from .bilinear import Bilinear
+from .bicubic import Bicubic
+from .interarea import InterArea
+from .lanczos import Lanczos

@@ -2,7 +2,7 @@ import av
 import numpy as np
 import torch
 
-from modules.video_transformer import VideoTransformer
+from .video_transformer import VideoTransformer
 
 class ModularProcessingPipeline:
     def __init__(self):

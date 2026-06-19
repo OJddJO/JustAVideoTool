@@ -1,6 +1,7 @@
 import cv2
 import torch
-from modules.video_transformer import VideoTransformer
+
+from ..video_transformer import VideoTransformer
 
 class InterArea(VideoTransformer):
     def __init__(self, scale=0.5):

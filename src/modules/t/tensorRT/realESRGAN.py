@@ -5,7 +5,7 @@ import torch
 import torch.nn.functional as F
 import gc
 
-from modules.video_transformer import VideoTransformer
+from ...video_transformer import VideoTransformer
 
 class RealESRGAN(VideoTransformer):
     def __init__(self, onnx_model_path="models/RealESRGANv2/RealESRGANv2-animevideo-xsx2.onnx", cache_dir="cache", tile_width=620, tile_height=360, tile_pad=32, scale=2):
@@ -48,8 +48,7 @@ class RealESRGAN(VideoTransformer):
                 'trt_profile_min_shapes': shape_str,
                 'trt_profile_opt_shapes': shape_str,
                 'trt_profile_max_shapes': shape_str,
-            }),
-            ('CUDAExecutionProvider', {'device_id': 0}),
+            })
         ]
         self.session = ort.InferenceSession(self.onnx_model_path, providers=providers)
 
