@@ -170,3 +170,5 @@ cache/
 output/
 *.javt_param
 temp/
+requirements.txt
+test*

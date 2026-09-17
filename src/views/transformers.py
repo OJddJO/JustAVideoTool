@@ -223,6 +223,9 @@ Bilinear resizing is fast and stable, making it a good general-purpose choice fo
             cache=False
         )
 
+    async def build_transformer(self):
+        return Bilinear(self.scale_factor)
+
 @ft.control
 class Bicubic_Layer(TransformerLayer):
     desc = """A simple transformer for downscaling frames using bicubic interpolation.
@@ -241,6 +244,9 @@ Bicubic downscaling reduces image size smoothly while oftenly preserving more de
             ],
             cache=False
         )
+
+    async def build_transformer(self):
+        return Bicubic(self.scale_factor)
 
 @ft.control
 class Lanczos_Layer(TransformerLayer):
@@ -261,6 +267,9 @@ Lanczos resizing is designed to preserve sharp detail and reduce aliasing, often
             cache=False
         )
 
+    async def build_transformer(self):
+        return Lanczos(self.scale_factor)
+
 @ft.control
 class InterArea_Layer(TransformerLayer):
     desc = """A transformer for downscaling frames using OpenCV's INTER_AREA method. (Runs on CPU so it might be slower than the others)
@@ -279,3 +288,6 @@ INTER_AREA is especially well-suited for shrinking images, since it averages pix
             ],
             cache=False
         )
+
+    async def build_transformer(self):
+        return InterArea(self.scale_factor)
