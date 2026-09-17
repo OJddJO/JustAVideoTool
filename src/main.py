@@ -122,7 +122,7 @@ class VideoTool:
             fps_num = fps.numerator * pipeline.framegen_factor
             fps_den = fps.denominator
 
-            cmd_video = f'ffmpeg -y -fflags +genpts -f rawvideo -pix_fmt rgb24 -s {width}x{height} -r {fps_num}/{fps_den} -i - '
+            cmd_video = f'ffmpeg -y -fflags +genpts -f rawvideo -pix_fmt rgb24 -s {int(width)}x{int(height)} -r {fps_num}/{fps_den} -i - '
 
             # Video only
             cmd_video += f'-map 0:v:0 -c:v {enc["video"]["codec"]} -pix_fmt {enc["video"]["pix_fmt"]} -preset {enc["video"]["preset"]} '

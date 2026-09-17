@@ -224,7 +224,7 @@ Bilinear resizing is fast and stable, making it a good general-purpose choice fo
         )
 
     async def build_transformer(self):
-        return Bilinear(self.scale_factor)
+        return Bilinear(float(self.scale_factor.value))
 
 @ft.control
 class Bicubic_Layer(TransformerLayer):
@@ -246,7 +246,7 @@ Bicubic downscaling reduces image size smoothly while oftenly preserving more de
         )
 
     async def build_transformer(self):
-        return Bicubic(self.scale_factor)
+        return Bicubic(float(self.scale_factor.value))
 
 @ft.control
 class Lanczos_Layer(TransformerLayer):
@@ -268,7 +268,7 @@ Lanczos resizing is designed to preserve sharp detail and reduce aliasing, often
         )
 
     async def build_transformer(self):
-        return Lanczos(self.scale_factor)
+        return Lanczos(float(self.scale_factor.value))
 
 @ft.control
 class InterArea_Layer(TransformerLayer):
@@ -290,4 +290,4 @@ INTER_AREA is especially well-suited for shrinking images, since it averages pix
         )
 
     async def build_transformer(self):
-        return InterArea(self.scale_factor)
+        return InterArea(float(self.scale_factor.value))
