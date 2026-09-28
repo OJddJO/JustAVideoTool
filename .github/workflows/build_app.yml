@@ -132,7 +132,7 @@ jobs:
     - name: Package Application Executable
       run: |
         Copy-Item -Path "${{ matrix.req_file }}" -Destination "./requirements.txt" -Force
-        flet build windows -v
+        flet build windows --python-version 3.12 -v
 
     - name: Include License in Build Output
       shell: powershell
