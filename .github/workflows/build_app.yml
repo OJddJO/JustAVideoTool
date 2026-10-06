@@ -28,8 +28,10 @@ jobs:
         include:
           - target: "TRT"
             req_file: "requirements/requirements_TRT.txt"
+            python_version: "3.11"
           - target: "TRT-RTX"
             req_file: "requirements/requirements_TRT-RTX.txt"
+            python_version: "3.12"
 
     steps:
     - name: Checkout Code
@@ -59,7 +61,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.12'
+        python-version: ${{ matrix.python_version }}
 
     - name: Install Visual Studio Build Tools
       uses: microsoft/setup-msbuild@v2
@@ -132,7 +134,7 @@ jobs:
     - name: Package Application Executable
       run: |
         Copy-Item -Path "${{ matrix.req_file }}" -Destination "./requirements.txt" -Force
-        flet build windows --python-version 3.12 -v
+        flet build windows --python-version ${{ matrix.python_version }} -v
 
     - name: Include License in Build Output
       shell: powershell
