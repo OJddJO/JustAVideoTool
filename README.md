@@ -2,7 +2,8 @@
 [![Build Desktop Application](https://github.com/OJddJO/JustAVideoTool/actions/workflows/build_app.yml/badge.svg)](https://github.com/OJddJO/JustAVideoTool/actions/workflows/build_app.yml)
 
 > [!NOTE]
-> Github Actions currently fails to build a working binary
+> Github Actions currently fails to build a working binary.
+>
 > To use the app, download the source, install the requirements (located in [requirements folder](./requirements/)) and do `flet run`.
 >
 > Python 3.12 or 3.13 is required. Other versions might not work properly.
