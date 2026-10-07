@@ -23,11 +23,11 @@ jobs:
 
     # Define the build matrix for both architectures
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         include:
-          - target: "TRT"
-            req_file: "requirements/requirements_TRT.txt"
+          # - target: "TRT"
+          #   req_file: "requirements/requirements_TRT.txt"
           - target: "TRT-RTX"
             req_file: "requirements/requirements_TRT-RTX.txt"
 
