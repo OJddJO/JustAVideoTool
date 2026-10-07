@@ -52,6 +52,9 @@ The main goal is to make an app for video alterations using AI with `.onnx` mode
 ## AI Models Used
 All AI models are from this beautiful [repository](https://github.com/AmusementClub/vs-mlrt). Thanks to AmusementClub !
 
+## AI Usage Disclaimer
+Github Copilot was used to make the **Github workflow**, and to understand how each AI models worked to implement them myself in the modular pipelining workflow.
+
 ## License
 This project is under MIT License, see [LICENSE](/LICENSE) for more informations.
 
