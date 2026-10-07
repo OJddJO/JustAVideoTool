@@ -11,6 +11,9 @@
 <img width="960" height="516" alt="image" src="https://github.com/user-attachments/assets/7d4b8e8f-5e49-4fd3-a9ce-c6a8f086c8b4" />
 <img width="960" height="516" alt="image" src="https://github.com/user-attachments/assets/c50a0f71-faf1-4f9f-bf35-fa29b638f999" />
 
+> [!NOTE] Github Actions currently fails to build a working binary
+> To use the app, download the source, install the requirements (located in [requirements folder](./requirements/)) and do `flet run`
+
 ## Goals
 The main goal is to make an app for video alterations using AI with `.onnx` models (such as `RealCUGAN`, `RealESRGAN`, `Waifu2x`, `RIFE`, ...) and `Nvidia`'s acceleration technologies (CUDA/TensorRT) in a modular pipelining approach. It would also encode the final result using [ffmpeg](https://ffmpeg.org/) with [AV1](https://aomedia.org/specifications/av1/) codec.
 
