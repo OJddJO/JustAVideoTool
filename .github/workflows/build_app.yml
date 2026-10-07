@@ -21,6 +21,16 @@ jobs:
       PYTHONUTF8: 1
       FLET_CLI_NO_RICH_OUTPUT: 1
 
+    # Define the build matrix for both architectures
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - target: "TRT"
+            req_file: "requirements/requirements_TRT.txt"
+          - target: "TRT-RTX"
+            req_file: "requirements/requirements_TRT-RTX.txt"
+
     steps:
     - name: Checkout Code
       uses: actions/checkout@v4
@@ -119,12 +129,12 @@ jobs:
         Remove-Item -Path "C:\Windows\SoftwareDistribution\Download\*" -Recurse -Force -ErrorAction SilentlyContinue
         npm cache clean --force -ErrorAction SilentlyContinue
 
-    - name: Package TRT Application Executable
+    - name: Package Application Executable
       run: |
-        Copy-Item -Path "requirements/requirements_TRT.txt" -Destination "./requirements.txt" -Force
+        Copy-Item -Path "${{ matrix.req_file }}" -Destination "./requirements.txt" -Force
         flet build windows --python-version 3.12 -v
 
-    - name: Include License in TRT Build Output
+    - name: Include License in Build Output
       shell: powershell
       run: |
         if (Test-Path "LICENSE") {
@@ -134,35 +144,10 @@ jobs:
             echo "Warning: LICENSE file not found in repository root."
         }
 
-    - name: Compress TRT Build Into Multi-Part Volumes
+    - name: Compress Build Into Architecture-Specific Multi-Part Volumes
       shell: powershell
       run: |
-        7z a -v2000m Just_A_Video_Tool-Windows-TRT.zip .\build\windows\* -y
-
-    - name: Clean Build Output Before TRT-RTX Build
-      shell: powershell
-      run: |
-        Remove-Item -Path "build/windows" -Recurse -Force -ErrorAction SilentlyContinue
-
-    - name: Package TRT-RTX Application Executable
-      run: |
-        Copy-Item -Path "requirements/requirements_TRT-RTX.txt" -Destination "./requirements.txt" -Force
-        flet build windows --python-version 3.12 -v
-
-    - name: Include License in TRT-RTX Build Output
-      shell: powershell
-      run: |
-        if (Test-Path "LICENSE") {
-            Copy-Item -Path "LICENSE" -Destination "build/windows/" -Force
-            echo "Successfully bundled LICENSE into the build folder!"
-        } else {
-            echo "Warning: LICENSE file not found in repository root."
-        }
-
-    - name: Compress TRT-RTX Build Into Multi-Part Volumes
-      shell: powershell
-      run: |
-        7z a -v2000m Just_A_Video_Tool-Windows-TRT-RTX.zip .\build\windows\* -y
+        7z a -v2000m Just_A_Video_Tool-Windows-${{ matrix.target }}.zip .\build\windows\* -y
 
     - name: Create GitHub Release and Upload Split Assets
       uses: softprops/action-gh-release@v2
@@ -172,8 +157,7 @@ jobs:
         draft: true
         prerelease: false
         files: |
-          Just_A_Video_Tool-Windows-TRT.zip.*
-          Just_A_Video_Tool-Windows-TRT-RTX.zip.*
+          Just_A_Video_Tool-Windows-${{ matrix.target }}.zip.*
         body: |
           ### 📦 Application Installation Instructions (Multi-Part Download)
 
